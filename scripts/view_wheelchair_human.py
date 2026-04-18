@@ -43,10 +43,10 @@ def main():
     skin.specular = 0.2
     skin.shininess = 0.1
 
-    # Body collision — static, floor frame
+    # Body collision — same position as wheelchair_base so meshes align
     user = spec.worldbody.add_body()
     user.name = "user_body"
-    user.pos = [0.02, -0.02, 0.4112]
+    user.pos = [0, 0, 0.4612]
     g = user.add_geom()
     g.name = "body_safety"
     g.type = mujoco.mjtGeom.mjGEOM_MESH
@@ -56,11 +56,11 @@ def main():
     g.group = 3
     g.rgba = [0.72, 0.58, 0.47, 0.15]
 
-    # Head — mocap, floor frame
+    # Head — mocap, floor frame, x,y centered on wheelchair
     head = spec.worldbody.add_body()
     head.name = "head"
     head.mocap = True
-    head.pos = [0.29, 0.35, 1.3112]
+    head.pos = [0.269, 0.340, 1.3112]
     head.quat = [0.704416, -0.061628, -0.061628, -0.680442]
 
     hg = head.add_geom()

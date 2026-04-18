@@ -28,9 +28,12 @@
   </asset>
 
   <worldbody>
-    <!-- Body safety envelope. Floor-frame pos = [0.02, -0.02, 0.4112].
-         Collision only (group=3). Wraps around the seated user. -->
-    <body name="user_body" pos="0.02 -0.02 0.4112">
+    <!-- Body safety envelope. Same position as wheelchair_base [0, 0, 0.4612].
+         In the original planning scene, both wheelchair and body collision
+         are at [0.02, -0.02, -0.05] relative to root — same position.
+         The wheelchair drop test gives z=0.4612 for wheels on floor.
+         Body collision must match exactly so it wraps around the chair. -->
+    <body name="user_body" pos="0 0 0.4612">
       <geom name="body_safety_envelope" type="mesh" mesh="body_collision"
             material="body_safety" contype="1" conaffinity="1" group="3"/>
     </body>
@@ -38,8 +41,12 @@
     <!-- Head — mocap body (movable via data.mocap_pos/quat).
          Floor-frame pos = [0.29, 0.35, 1.3112].
          Face wall is a child geom — moves with the head. -->
+    <!-- Head pos x,y aligned to wheelchair visual center (0.269, 0.340)
+         rather than the raw planning scene value (0.29, 0.35) which was
+         relative to the arm root, not the chair center. z from planning
+         scene converted to floor frame. -->
     <body name="head" mocap="true"
-          pos="0.29 0.35 1.3112"
+          pos="0.269 0.340 1.3112"
           quat="0.704416 -0.061628 -0.061628 -0.680442">
       <!-- Tom visual (head/upper body mesh) -->
       <geom name="head_visual" type="mesh" mesh="tom" material="skin"
@@ -48,10 +55,19 @@
       <geom name="head_collision" type="sphere" size="0.10"
             contype="1" conaffinity="1" group="3"
             rgba="0.7 0.5 0.4 0.2"/>
-      <!-- Mouth site — feeding target -->
+      <!-- Mouth site — feeding target. Approximate default position;
+           on the real robot this comes from face detection at runtime.
+           Offset: forward (+x in head frame) and slightly below center. -->
       <site name="mouth" pos="0.05 0.0 -0.02"
             size="0.015" rgba="1 0 0 1" type="sphere"/>
-      <!-- Face wall — thin box in front of face (head-local frame).
+      <!-- Mouth visual marker (sites don't render in mj_viser) -->
+      <geom name="mouth_marker" type="sphere" size="0.015"
+            pos="0.05 0.0 -0.02" rgba="1 0 0 0.8"
+            contype="0" conaffinity="0" group="2"/>
+      <!-- Face wall — thin box in front of face. Child of head so it
+           tracks head movement (improvement over original, which was a
+           fixed world-frame box at [0.37, 0.22, 0.85] in root frame).
+           Half-sizes from planning scene: primitive_dims=[0.45, 0.01, 0.4]/2.
            Initially disabled (contype=0). Toggle at runtime for safety. -->
       <geom name="face_wall_geom" type="box"
             size="0.005 0.225 0.2" pos="0.15 0 0"
