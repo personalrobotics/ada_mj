@@ -17,7 +17,7 @@ import mujoco
 COMPONENTS = {
     "jaco2": "src/ada_mj/models/jaco2/j2n6s200.xml",
     "wheelchair": "src/ada_mj/models/wheelchair/scene.xml",
-    "human": "src/ada_mj/models/human/seated.xml",
+    "human": "src/ada_mj/models/human/scene.xml",
     "fork": "src/ada_mj/models/articutool/fork.xml",
 }
 
