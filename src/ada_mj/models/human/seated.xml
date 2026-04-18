@@ -1,0 +1,25 @@
+<!-- Seated human model for the wheelchair.
+     Visual: tom.stl full-body mesh.
+     Collision: body_collision_in_wheelchair.stl (expanded to account for user).
+     Head is a separate mocap body (see ada assembly). -->
+<mujoco model="seated_human">
+  <compiler angle="radian" meshdir="assets"/>
+
+  <asset>
+    <material name="skin" rgba="0.72 0.58 0.47 0.8" specular="0.2" shininess="0.1"/>
+    <material name="body_collision" rgba="0.72 0.58 0.47 0.3" specular="0.1" shininess="0.05"/>
+    <mesh name="tom" file="tom.stl"/>
+    <mesh name="body_collision" file="body_collision_in_wheelchair.stl"/>
+  </asset>
+
+  <worldbody>
+    <body name="seated_human" pos="0.02 -0.02 -0.05">
+      <!-- Visual mesh -->
+      <geom name="human_visual" type="mesh" mesh="tom" material="skin"
+            contype="0" conaffinity="0" group="2"/>
+      <!-- Collision mesh (expanded around body for safety margin) -->
+      <geom name="human_collision" type="mesh" mesh="body_collision" material="body_collision"
+            contype="1" conaffinity="1" group="3"/>
+    </body>
+  </worldbody>
+</mujoco>
