@@ -51,19 +51,33 @@
       <!-- Tom visual (head/upper body mesh) -->
       <geom name="head_visual" type="mesh" mesh="tom" material="skin"
             contype="0" conaffinity="0" group="2"/>
-      <!-- Head collision sphere -->
-      <geom name="head_collision" type="sphere" size="0.10"
+      <!-- Head collision box — sized to tom.stl bounds:
+           x: [-0.256, 0.017] → half=0.137, center=-0.120
+           y: [-0.133, 0.133] → half=0.133, center=0
+           z: [-0.193, 0.220] → half=0.207, center=0.014 -->
+      <geom name="head_collision" type="box"
+            size="0.137 0.133 0.207" pos="-0.120 0 0.014"
             contype="1" conaffinity="1" group="3"
-            rgba="0.7 0.5 0.4 0.2"/>
-      <!-- Mouth site — feeding target. Approximate default position;
+            rgba="0.7 0.5 0.4 0.15"/>
+      <!-- Mouth — feeding target frame. Approximate default position;
            on the real robot this comes from face detection at runtime.
-           Offset: forward (+x in head frame) and slightly below center. -->
-      <site name="mouth" pos="0.05 0.0 -0.02"
-            size="0.015" rgba="1 0 0 1" type="sphere"/>
-      <!-- Mouth visual marker (sites don't render in mj_viser) -->
-      <geom name="mouth_marker" type="sphere" size="0.015"
-            pos="0.05 0.0 -0.02" rgba="1 0 0 0.8"
-            contype="0" conaffinity="0" group="2"/>
+           Offset: forward (+x in head frame) and slightly below center.
+           The site defines the programmatic target. The geom markers
+           show the frame axes in the viewer (mj_viser doesn't render sites).
+           Frame: +x = out of mouth (approach direction), +z = up (toward top of head). -->
+      <site name="mouth" pos="0.05 0.0 -0.02" size="0.001"/>
+      <!-- Approach axis (x = out of mouth, red) -->
+      <geom name="mouth_axis_x" type="cylinder" size="0.002 0.015"
+            pos="0.065 0.0 -0.02" quat="0.707107 0 0.707107 0"
+            rgba="1 0 0 0.9" contype="0" conaffinity="0" group="2"/>
+      <!-- Opening axis (y, green) -->
+      <geom name="mouth_axis_y" type="cylinder" size="0.002 0.015"
+            pos="0.05 0.015 -0.02" quat="0.707107 0.707107 0 0"
+            rgba="0 1 0 0.9" contype="0" conaffinity="0" group="2"/>
+      <!-- Up axis (z = toward top of head, blue) -->
+      <geom name="mouth_axis_z" type="cylinder" size="0.002 0.015"
+            pos="0.05 0.0 -0.005"
+            rgba="0 0 1 0.9" contype="0" conaffinity="0" group="2"/>
       <!-- Face wall — thin box in front of face. Child of head so it
            tracks head movement (improvement over original, which was a
            fixed world-frame box at [0.37, 0.22, 0.85] in root frame).

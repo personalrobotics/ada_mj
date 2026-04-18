@@ -72,20 +72,39 @@ def main():
     hg.conaffinity = 0
     hg.group = 2
 
+    # Head collision box (sized to tom.stl bounds)
     hc = head.add_geom()
     hc.name = "head_collision"
-    hc.type = mujoco.mjtGeom.mjGEOM_SPHERE
-    hc.size = [0.10, 0, 0]
+    hc.type = mujoco.mjtGeom.mjGEOM_BOX
+    hc.size = [0.137, 0.133, 0.207]
+    hc.pos = [-0.120, 0, 0.014]
     hc.contype = 1
     hc.conaffinity = 1
     hc.group = 3
-    hc.rgba = [0.7, 0.5, 0.4, 0.2]
+    hc.rgba = [0.7, 0.5, 0.4, 0.15]
 
+    # Mouth site (programmatic target)
     ms = head.add_site()
     ms.name = "mouth"
     ms.pos = [0.05, 0.0, -0.02]
-    ms.size = [0.015, 0, 0]
-    ms.rgba = [1, 0, 0, 1]
+    ms.size = [0.001, 0, 0]
+
+    # Mouth frame axes (visual markers)
+    for axis_name, axis_size, axis_pos, axis_quat, axis_rgba in [
+        ("mouth_axis_x", [0.002, 0.015], [0.065, 0, -0.02], [0.707107, 0, 0.707107, 0], [1, 0, 0, 0.9]),
+        ("mouth_axis_y", [0.002, 0.015], [0.05, 0.015, -0.02], [0.707107, 0.707107, 0, 0], [0, 1, 0, 0.9]),
+        ("mouth_axis_z", [0.002, 0.015], [0.05, 0, -0.005], [1, 0, 0, 0], [0, 0, 1, 0.9]),
+    ]:
+        ag = head.add_geom()
+        ag.name = axis_name
+        ag.type = mujoco.mjtGeom.mjGEOM_CYLINDER
+        ag.size = axis_size
+        ag.pos = axis_pos
+        ag.quat = axis_quat
+        ag.rgba = axis_rgba
+        ag.contype = 0
+        ag.conaffinity = 0
+        ag.group = 2
 
     # Face wall — child of head
     fw = head.add_geom()
