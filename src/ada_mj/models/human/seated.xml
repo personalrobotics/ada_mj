@@ -1,24 +1,22 @@
 <!-- Seated human model for the ADA feeding setup.
+     ALL POSITIONS IN FLOOR FRAME (z=0 = floor).
 
-     Three elements, all positioned relative to the arm's root frame
-     (positions from ada_planning_scene/config/ada_planning_scene.yaml):
+     Converted from ada_planning_scene config (seated namespace).
+     Original positions were relative to arm root frame. The arm root
+     sits 0.4612m above the floor (from wheelchair drop test).
+     Floor-frame z = root-frame z + 0.4612.
 
-     1. body_collision_in_wheelchair.stl — safety envelope that prevents
-        the arm from contacting the user. Collision-only (group=3).
-        Position: [0.02, -0.02, -0.05] (same as wheelchair mesh).
+     Original root-frame positions (from ada_planning_scene.yaml):
+       body:      [0.02, -0.02, -0.05]  quat_xyzw=[0, 0, 0, 1]
+       head(tom): [0.29,  0.35,  0.85]  quat_xyzw=[-0.0616, -0.0616, -0.6804, 0.7044]
+       face_wall: [0.37,  0.22,  0.85]  box [0.45, 0.01, 0.4]
 
-     2. tom.stl — visual model of the seated user's head/upper body.
-        Visual-only (group=2).
-        Position: [0.29, 0.35, 0.85] with rotation.
-
-     3. Head mocap body — movable via data.mocap_pos/quat to simulate
-        face detection. Has a mouth site (the feeding target).
-        Initial position: same as tom.stl.
-
-     4. in_front_of_face_wall — a thin box in front of the face that
-        prevents the arm from moving unnecessarily toward the user.
-        Toggled on/off during feeding (add_on_initialize: False).
-        Collision-only. -->
+     Components:
+       1. body_collision — safety envelope wrapping the seated user (collision only)
+       2. tom visual — head/upper body mesh
+       3. head collision sphere
+       4. mouth site — feeding target
+       5. face wall — thin box in front of face (collision, initially disabled) -->
 <mujoco model="seated_human">
   <compiler angle="radian" meshdir="assets"/>
 
@@ -30,38 +28,33 @@
   </asset>
 
   <worldbody>
-    <!-- Body safety envelope (collision only, semi-transparent).
-         Same position as wheelchair mesh — wraps around the user. -->
-    <body name="user_body" pos="0.02 -0.02 -0.05">
+    <!-- Body safety envelope. Floor-frame pos = [0.02, -0.02, 0.4112].
+         Collision only (group=3). Wraps around the seated user. -->
+    <body name="user_body" pos="0.02 -0.02 0.4112">
       <geom name="body_safety_envelope" type="mesh" mesh="body_collision"
             material="body_safety" contype="1" conaffinity="1" group="3"/>
     </body>
 
-    <!-- Head — mocap body for face detection simulation.
-         Position/orientation from planning scene config (seated namespace).
-         Movable at runtime: data.mocap_pos[head_id], data.mocap_quat[head_id]. -->
+    <!-- Head — mocap body (movable via data.mocap_pos/quat).
+         Floor-frame pos = [0.29, 0.35, 1.3112].
+         Face wall is a child geom — moves with the head. -->
     <body name="head" mocap="true"
-          pos="0.29 0.35 0.85"
+          pos="0.29 0.35 1.3112"
           quat="0.704416 -0.061628 -0.061628 -0.680442">
-      <!-- Tom visual (head mesh) -->
+      <!-- Tom visual (head/upper body mesh) -->
       <geom name="head_visual" type="mesh" mesh="tom" material="skin"
             contype="0" conaffinity="0" group="2"/>
-      <!-- Head collision sphere (for planning) -->
+      <!-- Head collision sphere -->
       <geom name="head_collision" type="sphere" size="0.10"
             contype="1" conaffinity="1" group="3"
             rgba="0.7 0.5 0.4 0.2"/>
-      <!-- Mouth site — the feeding target point.
-           Offset: slightly forward and below head center. -->
+      <!-- Mouth site — feeding target -->
       <site name="mouth" pos="0.05 0.0 -0.02"
             size="0.015" rgba="1 0 0 1" type="sphere"/>
-    </body>
-
-    <!-- In-front-of-face wall (collision only, initially disabled).
-         A thin box that prevents the arm from moving toward the user
-         during non-feeding phases. Toggled via geom contype at runtime.
-         From planning scene: box [0.45, 0.01, 0.4] at [0.37, 0.22, 0.85]. -->
-    <body name="face_wall" pos="0.37 0.22 0.85">
-      <geom name="face_wall_geom" type="box" size="0.225 0.005 0.2"
+      <!-- Face wall — thin box in front of face (head-local frame).
+           Initially disabled (contype=0). Toggle at runtime for safety. -->
+      <geom name="face_wall_geom" type="box"
+            size="0.005 0.225 0.2" pos="0.15 0 0"
             contype="0" conaffinity="0" group="3"
             rgba="1 0.3 0.3 0.1"/>
     </body>

@@ -1,3 +1,4 @@
+<!-- Human standalone scene (no wheelchair) -->
 <mujoco model="human_scene">
   <include file="seated.xml"/>
   <worldbody>
