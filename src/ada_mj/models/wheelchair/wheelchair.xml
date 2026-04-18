@@ -1,13 +1,12 @@
-<!-- Permobil wheelchair with tilt joint.
-     The arm attaches at arm_attachment_site on the tilt body.
-     Wheelchair visual is offset [0.02, -0.02, -0.05] from root
-     (from ada_planning_scene config).
+<!-- Permobil wheelchair.
+     The arm attaches at arm_attachment_site.
 
-     Tilt joint specs from ada_ros2 URDF:
-       axis: -1 0 0
-       range: ±π rad
-       velocity: 0.15 rad/s
-       effort: 80 Nm -->
+     The real wheelchair has a "tilt" that's actually a calibration
+     transform — when the user sits down, the tyres compress unevenly
+     and the chair tilts. This is measured once per session and applied
+     as a fixed transform, not an actuated joint. In the assembly,
+     set the quat on arm_attachment_site's parent body to match the
+     measured tilt. Default: identity (perfectly level). -->
 <mujoco model="wheelchair">
   <compiler angle="radian" meshdir="assets"/>
   <option integrator="implicitfast"/>
@@ -18,21 +17,7 @@
   </asset>
 
   <worldbody>
-    <!-- Wheelchair base (static, visual + collision).
-         Raw STL z range: [-0.4694, 0.8759]. Mesh origin is NOT at the
-         bottom. Body z=+0.4694 places wheels exactly on the floor.
-         No empirical offsets — this is from the raw vertex data. -->
-    <!-- Wheelchair body positioned so wheels sit on the floor.
-         The mesh origin is offset from useful reference points:
-           - geom renders at body_pos + [0.269, 0.340, -0.044] (MuJoCo internal offset)
-           - physics drop test: body z=0.4612 puts convex hull on floor
-         The planning scene config places the mesh at [0.02, -0.02, -0.05]
-         relative to the arm's root frame.
-
-         For the assembled ADA, the arm_attachment_site defines where the
-         arm mounts. The wheelchair visual is scenery around it. The offset
-         between the visual center and the arm mount is baked into the
-         tilt_body position.  -->
+    <!-- z=0.4612 from physics drop test (convex hull on floor plane). -->
     <body name="wheelchair_base" pos="0 0 0.4612">
       <geom name="wheelchair_visual" type="mesh" mesh="wheelchair" material="wheelchair_metal"
             contype="0" conaffinity="0" group="2"/>
@@ -40,26 +25,11 @@
             contype="1" conaffinity="1" group="3"
             rgba="0.3 0.5 0.3 0.2"/>
 
-      <!-- Tilt mechanism. The arm_attachment_site is where the arm base
-           sits in the real robot. The planning scene says the wheelchair
-           mesh is at [0.02, -0.02, -0.05] relative to root, meaning
-           the arm root is at [-0.02, +0.02, +0.05] relative to the mesh.
-           Combined with the wheelchair_base z offset, the tilt body
-           undoes the wheelchair position to place the arm attachment
-           at the correct location relative to the wheelchair visual. -->
-      <body name="tilt_body" pos="0 0 -0.4612">
-        <inertial pos="0 0 0.3" mass="15.0" diaginertia="1.0 1.0 0.5"/>
-        <joint name="robot_tilt" axis="-1 0 0" range="-3.14159 3.14159"
-               limited="true" damping="5.0"/>
-
-        <!-- Arm mounts here via assembly -->
+      <!-- Arm mount. The tilt calibration (if needed) is applied as a
+           quat on this body at assembly time. Default: identity. -->
+      <body name="arm_mount" pos="0 0 -0.4612">
         <site name="arm_attachment_site" pos="0 0 0" size="0.01" rgba="0 0 1 0.3"/>
       </body>
     </body>
   </worldbody>
-
-  <actuator>
-    <general name="act_robot_tilt" joint="robot_tilt" gaintype="fixed" biastype="affine"
-             gainprm="100" biasprm="0 -100 -20" forcerange="-80 80"/>
-  </actuator>
 </mujoco>
