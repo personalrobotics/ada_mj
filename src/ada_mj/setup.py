@@ -3,12 +3,15 @@
 
 """Build the ADA MuJoCo scene.
 
-Loads the JACO2 arm from a pre-generated URDF (committed to version
+Loads the ADA robot from a pre-generated URDF (committed to version
 control, generated once via ``scripts/convert_from_xacro.py``), then
-adds workspace objects (wheelchair, human, table, head) and the
-Articutool 2-DOF fork via MjSpec.
+adds workspace objects (wheelchair, human, table, head) via MjSpec.
 
-No xacro, no ROS, no runtime generation — just loads a file.
+The URDF includes the full assembly: JACO2 arm + wheelchair tilt +
+forque F/T sensor + fork + camera mount — all with correct transforms
+from the original xacro.
+
+No xacro, no ROS, no runtime generation.
 
 Usage::
 
@@ -18,6 +21,8 @@ Usage::
 
 from __future__ import annotations
 
+import os
+import tempfile
 from pathlib import Path
 
 import mujoco
@@ -32,66 +37,37 @@ from ada_mj.paths import find_ada_description, find_ada_planning_scene
 
 _MODELS_DIR = Path(__file__).parent / "models"
 
+# Kinova dark grey — the real JACO2 is dark carbon fiber
+_ARM_RGBA = [0.15, 0.15, 0.18, 1.0]
+_RING_RGBA = [0.25, 0.25, 0.28, 1.0]
+_FORQUE_RGBA = [0.4, 0.4, 0.4, 1.0]
+
 
 def build_ada_model() -> tuple[mujoco.MjModel, mujoco.MjData]:
-    """Build the complete ADA scene and return (model, data).
-
-    Loads the JACO2 arm from a committed URDF, then adds workspace
-    objects and the Articutool via MjSpec.
-    """
+    """Build the complete ADA scene and return (model, data)."""
     desc = find_ada_description()
-    urdf_path = _MODELS_DIR / "jaco2.urdf"
+    urdf_path = _MODELS_DIR / "ada.urdf"
     if not urdf_path.exists():
         raise FileNotFoundError(
-            f"JACO2 URDF not found at {urdf_path}. "
+            f"ADA URDF not found at {urdf_path}. "
             "Run: uv run python scripts/convert_from_xacro.py"
         )
 
-    # Load the JACO2 URDF. MuJoCo's URDF parser strips directory
-    # components from mesh filenames, so meshdir must point at the
-    # meshes directory. Compile the arm URDF first to resolve meshes,
-    # export as MJCF XML, then reload WITHOUT meshdir so we can add
-    # non-arm meshes from other directories.
-    # Load URDF, set meshdir, then use this spec directly. Non-arm
-    # meshes need absolute paths — but MuJoCo strips directories.
-    # Workaround: create symlinks in a temp dir that flattens all meshes.
-    import os
-    import tempfile
-
-    flat_dir = tempfile.mkdtemp(prefix="ada_meshes_")
-    # Symlink arm meshes
-    for f in (desc / "meshes").glob("*.STL"):
-        target = os.path.join(flat_dir, f.name)
-        if not os.path.exists(target):
-            os.symlink(f, target)
-    # Symlink forque meshes (with unique timestamped names, no collision)
-    for f in (desc / "meshes" / "forque").glob("*.stl"):
-        target = os.path.join(flat_dir, f.name)
-        if not os.path.exists(target):
-            os.symlink(f, target)
-    # Symlink workspace meshes
-    try:
-        scene_dir = find_ada_planning_scene() / "assets"
-        for f in scene_dir.glob("*.stl"):
-            target = os.path.join(flat_dir, f.name)
-            if not os.path.exists(target):
-                os.symlink(f, target)
-    except FileNotFoundError:
-        pass  # workspace meshes optional
+    # Create a flat directory with symlinks to all mesh sources.
+    # MuJoCo strips directory components from mesh filenames during
+    # URDF parsing, so all meshes must be reachable by basename alone.
+    flat_dir = _create_flat_meshdir(desc)
 
     spec = mujoco.MjSpec.from_file(str(urdf_path))
     spec.meshdir = flat_dir
     spec.option.gravity = [0, 0, -9.81]
 
-    # Gravcomp on all arm bodies
+    # Gravcomp on all arm bodies (real Kinova runs internal gravcomp)
     for name in [
-        "j2n6s200_link_base",
-        "j2n6s200_link_1",
-        "j2n6s200_link_2",
-        "j2n6s200_link_3",
-        "j2n6s200_link_4",
-        "j2n6s200_link_5",
-        "j2n6s200_link_6",
+        "j2n6s200_link_base", "j2n6s200_link_1", "j2n6s200_link_2",
+        "j2n6s200_link_3", "j2n6s200_link_4", "j2n6s200_link_5",
+        "j2n6s200_link_6", "FTArmMount", "FTMount", "FT",
+        "forkHandle", "forkHandleCover", "forque", "forkTine",
     ]:
         body = spec.body(name)
         if body is not None:
@@ -108,6 +84,16 @@ def build_ada_model() -> tuple[mujoco.MjModel, mujoco.MjData]:
         act.biasprm[2] = -5.0
         act.biastype = mujoco.mjtBias.mjBIAS_AFFINE
 
+    # Wheelchair tilt actuator
+    tilt_act = spec.add_actuator()
+    tilt_act.name = "act_robot_tilt"
+    tilt_act.target = "robot_tilt"
+    tilt_act.trntype = mujoco.mjtTrn.mjTRN_JOINT
+    tilt_act.gainprm[0] = 100.0
+    tilt_act.biasprm[1] = -100.0
+    tilt_act.biasprm[2] = -20.0
+    tilt_act.biastype = mujoco.mjtBias.mjBIAS_AFFINE
+
     # EE site on the end effector body
     ee_body = spec.body("j2n6s200_end_effector")
     if ee_body is not None:
@@ -117,8 +103,14 @@ def build_ada_model() -> tuple[mujoco.MjModel, mujoco.MjData]:
         site.size = [0.005, 0, 0]
         site.rgba = [0, 1, 0, 1]
 
-    # Articutool (2-DOF: tilt + roll)
-    _add_articutool(spec, desc)
+    # Fork tip site
+    fork_body = spec.body("forkTip")
+    if fork_body is not None:
+        site = fork_body.add_site()
+        site.name = "fork_tip"
+        site.pos = [0, 0, 0]
+        site.size = [0.003, 0, 0]
+        site.rgba = [1, 0, 0, 1]
 
     # Floor + lighting
     floor = spec.worldbody.add_geom()
@@ -131,7 +123,7 @@ def build_ada_model() -> tuple[mujoco.MjModel, mujoco.MjData]:
     light.pos = [0, 0, 3]
     light.dir = [0, 0, -1]
 
-    # Workspace objects
+    # Workspace (wheelchair, human, table)
     _add_workspace(spec)
 
     # Head (mocap body with mouth site)
@@ -140,6 +132,9 @@ def build_ada_model() -> tuple[mujoco.MjModel, mujoco.MjData]:
     # Compile
     model = spec.compile()
     data = mujoco.MjData(model)
+
+    # Color the arm geoms (URDF materials come through as light grey)
+    _color_arm_geoms(model)
 
     # Set arm to above-plate config
     for i, jname in enumerate(JACO2_JOINT_NAMES):
@@ -157,113 +152,84 @@ def build_ada_model() -> tuple[mujoco.MjModel, mujoco.MjData]:
     return model, data
 
 
-def _add_articutool(spec: mujoco.MjSpec, desc: Path) -> None:
-    """Add the 2-DOF Articutool (tilt + roll) to j2n6s200_link_6."""
-    hand = spec.body("j2n6s200_link_6")
-    if hand is None:
-        return
+def _create_flat_meshdir(desc: Path) -> str:
+    """Create a temp directory with symlinks to all mesh sources."""
+    flat_dir = tempfile.mkdtemp(prefix="ada_meshes_")
 
-    # Forque meshes — filenames only (flat_dir has symlinks)
-    for name, fname in [
-        ("ft_arm_mount", "2024_01_18_FTArmMount.stl"),
-        ("fork_handle", "2024_06_24_forkHandleHollow.stl"),
-        ("fork_tine", "fork_tine.stl"),
-    ]:
-        m = spec.add_mesh()
-        m.name = name
-        m.file = fname
-        m.scale = [0.001, 0.001, 0.001]
+    # Arm meshes (STL)
+    for f in (desc / "meshes").glob("*.STL"):
+        target = os.path.join(flat_dir, f.name)
+        if not os.path.exists(target):
+            os.symlink(f, target)
 
-    # Mount
-    mount = hand.add_body()
-    mount.name = "articutool_mount"
-    mount.pos = [0.0065, -0.011, -0.0075]
-    mount.quat = _rpy_to_quat([np.pi / 2, 0, np.pi / 2])
+    # Forque meshes (stl, different case)
+    for f in (desc / "meshes" / "forque").glob("*.stl"):
+        # Normalize to .STL since the URDF was converted to use .STL
+        stl_name = f.stem + ".STL"
+        target = os.path.join(flat_dir, stl_name)
+        if not os.path.exists(target):
+            os.symlink(f, target)
 
-    mg = mount.add_geom()
-    mg.type = mujoco.mjtGeom.mjGEOM_MESH
-    mg.meshname = "ft_arm_mount"
-    mg.contype = 0
-    mg.conaffinity = 0
-    mg.rgba = [0.4, 0.4, 0.4, 1]
+    # Camera meshes
+    for f in (desc / "meshes" / "camera").glob("*.stl"):
+        stl_name = f.stem + ".STL"
+        target = os.path.join(flat_dir, stl_name)
+        if not os.path.exists(target):
+            os.symlink(f, target)
 
-    # Tilt joint
-    tilt = mount.add_body()
-    tilt.name = "articutool_tilt"
-    tilt.pos = [0, 0, 0.05]
+    # Workspace meshes
+    try:
+        scene_dir = find_ada_planning_scene() / "assets"
+        for f in scene_dir.glob("*.stl"):
+            stl_name = f.stem + ".STL"
+            target = os.path.join(flat_dir, stl_name)
+            if not os.path.exists(target):
+                os.symlink(f, target)
+    except FileNotFoundError:
+        pass
 
-    tj = tilt.add_joint()
-    tj.name = "articutool_tilt_joint"
-    tj.type = mujoco.mjtJoint.mjJNT_HINGE
-    tj.axis = [1, 0, 0]
-    tj.range = [-1.0, 1.0]
-    tj.limited = True
-    tj.damping = 0.1
+    return flat_dir
 
-    tg = tilt.add_geom()
-    tg.type = mujoco.mjtGeom.mjGEOM_MESH
-    tg.meshname = "fork_handle"
-    tg.contype = 0
-    tg.conaffinity = 0
-    tg.rgba = [0.3, 0.3, 0.3, 1]
 
-    ta = spec.add_actuator()
-    ta.name = "act_articutool_tilt"
-    ta.target = "articutool_tilt_joint"
-    ta.trntype = mujoco.mjtTrn.mjTRN_JOINT
-    ta.gainprm[0] = 10.0
-    ta.biasprm[1] = -10.0
-    ta.biasprm[2] = -1.0
-    ta.biastype = mujoco.mjtBias.mjBIAS_AFFINE
+def _color_arm_geoms(model: mujoco.MjModel) -> None:
+    """Set dark colors on arm geoms (URDF materials come through as light)."""
+    arm_body_names = {
+        "j2n6s200_link_base", "j2n6s200_link_1", "j2n6s200_link_2",
+        "j2n6s200_link_3", "j2n6s200_link_4", "j2n6s200_link_5",
+        "j2n6s200_link_6", "j2n6s200_link_finger_1", "j2n6s200_link_finger_2",
+        "j2n6s200_link_finger_tip_1", "j2n6s200_link_finger_tip_2",
+    }
+    forque_body_names = {
+        "FTArmMount", "FTMount", "FT", "forkHandle", "forkHandleCover",
+        "forque", "forkTine",
+    }
 
-    # Roll joint
-    roll = tilt.add_body()
-    roll.name = "articutool_roll"
-    roll.pos = [0, 0, 0.05]
+    arm_body_ids = set()
+    for name in arm_body_names:
+        bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name)
+        if bid >= 0:
+            arm_body_ids.add(bid)
 
-    rj = roll.add_joint()
-    rj.name = "articutool_roll_joint"
-    rj.type = mujoco.mjtJoint.mjJNT_HINGE
-    rj.axis = [0, 0, 1]
-    rj.range = [-np.pi, np.pi]
-    rj.limited = True
-    rj.damping = 0.05
+    forque_body_ids = set()
+    for name in forque_body_names:
+        bid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, name)
+        if bid >= 0:
+            forque_body_ids.add(bid)
 
-    ra = spec.add_actuator()
-    ra.name = "act_articutool_roll"
-    ra.target = "articutool_roll_joint"
-    ra.trntype = mujoco.mjtTrn.mjTRN_JOINT
-    ra.gainprm[0] = 5.0
-    ra.biasprm[1] = -5.0
-    ra.biasprm[2] = -0.5
-    ra.biastype = mujoco.mjtBias.mjBIAS_AFFINE
-
-    # Fork tine + tip site
-    tine = roll.add_body()
-    tine.name = "fork_tine"
-    tine.pos = [0, 0, 0.05]
-
-    fg = tine.add_geom()
-    fg.type = mujoco.mjtGeom.mjGEOM_MESH
-    fg.meshname = "fork_tine"
-    fg.contype = 1
-    fg.conaffinity = 1
-    fg.rgba = [0.8, 0.8, 0.8, 1]
-
-    tip = tine.add_site()
-    tip.name = "fork_tip"
-    tip.pos = [0, 0, 0.04]
-    tip.size = [0.003, 0, 0]
-    tip.rgba = [1, 0, 0, 1]
+    for gid in range(model.ngeom):
+        bid = int(model.geom_bodyid[gid])
+        if bid in arm_body_ids:
+            model.geom_rgba[gid] = _ARM_RGBA
+        elif bid in forque_body_ids:
+            model.geom_rgba[gid] = _FORQUE_RGBA
 
 
 def _add_workspace(spec: mujoco.MjSpec) -> None:
     """Add wheelchair, human body, and table."""
-    # Meshes are symlinked into flat_dir; just use filenames
     for name in ["wheelchair", "body_collision_in_wheelchair", "table", "tom"]:
         m = spec.add_mesh()
         m.name = f"scene_{name}"
-        m.file = f"{name}.stl"
+        m.file = f"{name}.STL"
 
     # Wheelchair (static)
     wc = spec.worldbody.add_body()
@@ -343,12 +309,3 @@ def _add_head(spec: mujoco.MjSpec) -> None:
     mouth.size = [0.015, 0, 0]
     mouth.rgba = [1, 0, 0, 1]
     mouth.type = mujoco.mjtGeom.mjGEOM_SPHERE
-
-
-def _rpy_to_quat(rpy: list[float]) -> list[float]:
-    """Convert roll-pitch-yaw to wxyz quaternion."""
-    from scipy.spatial.transform import Rotation
-
-    R = Rotation.from_euler("xyz", rpy)
-    q = R.as_quat()
-    return [float(q[3]), float(q[0]), float(q[1]), float(q[2])]
