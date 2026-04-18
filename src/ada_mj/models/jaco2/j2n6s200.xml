@@ -184,12 +184,13 @@
 
   <actuator>
     <!-- Arm joints -->
-    <general name="act_j2n6s200_joint_1" joint="j2n6s200_joint_1" gaintype="fixed" biastype="affine" gainprm="50" biasprm="0 -50 -5"/>
-    <general name="act_j2n6s200_joint_2" joint="j2n6s200_joint_2" gaintype="fixed" biastype="affine" gainprm="80" biasprm="0 -80 -8" ctrlrange="0.820305 5.46288"/>
-    <general name="act_j2n6s200_joint_3" joint="j2n6s200_joint_3" gaintype="fixed" biastype="affine" gainprm="50" biasprm="0 -50 -5" ctrlrange="0.331613 5.95157"/>
-    <general name="act_j2n6s200_joint_4" joint="j2n6s200_joint_4" gaintype="fixed" biastype="affine" gainprm="30" biasprm="0 -30 -3"/>
-    <general name="act_j2n6s200_joint_5" joint="j2n6s200_joint_5" gaintype="fixed" biastype="affine" gainprm="30" biasprm="0 -30 -3"/>
-    <general name="act_j2n6s200_joint_6" joint="j2n6s200_joint_6" gaintype="fixed" biastype="affine" gainprm="30" biasprm="0 -30 -3"/>
+    <!-- Effort limits from URDF: J1=40, J2=80, J3=40, J4-6=20 Nm -->
+    <general name="act_j2n6s200_joint_1" joint="j2n6s200_joint_1" gaintype="fixed" biastype="affine" gainprm="50" biasprm="0 -50 -5" forcerange="-40 40"/>
+    <general name="act_j2n6s200_joint_2" joint="j2n6s200_joint_2" gaintype="fixed" biastype="affine" gainprm="80" biasprm="0 -80 -8" ctrlrange="0.820305 5.46288" forcerange="-80 80"/>
+    <general name="act_j2n6s200_joint_3" joint="j2n6s200_joint_3" gaintype="fixed" biastype="affine" gainprm="50" biasprm="0 -50 -5" ctrlrange="0.331613 5.95157" forcerange="-40 40"/>
+    <general name="act_j2n6s200_joint_4" joint="j2n6s200_joint_4" gaintype="fixed" biastype="affine" gainprm="30" biasprm="0 -30 -3" forcerange="-20 20"/>
+    <general name="act_j2n6s200_joint_5" joint="j2n6s200_joint_5" gaintype="fixed" biastype="affine" gainprm="30" biasprm="0 -30 -3" forcerange="-20 20"/>
+    <general name="act_j2n6s200_joint_6" joint="j2n6s200_joint_6" gaintype="fixed" biastype="affine" gainprm="30" biasprm="0 -30 -3" forcerange="-20 20"/>
     <!-- Finger actuators: each independently drives its proximal joint.
          ctrl range maps to Kinova API 0 (open) → 1.51 (fully closed).
          Effort limit 2 Nm (from URDF). Strong enough to grip firmly. -->
