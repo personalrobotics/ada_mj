@@ -91,8 +91,9 @@ class ADAConfig:
     with_human: bool = True
     with_camera: bool = True
 
-    # End-effector site (changes based on tool)
-    ee_site: str = "articutool/fork_tip"
+    # End-effector site — must be on the arm's kinematic chain (link_6),
+    # not on the tool (freejoint body). IK can only move arm joints.
+    ee_site: str = "ee_site"
 
     # Sub-configs
     articutool: ArticutoolConfig = field(default_factory=ArticutoolConfig)
@@ -109,9 +110,9 @@ class ADAConfig:
     @classmethod
     def with_forque(cls) -> ADAConfig:
         """Config with forque (rigid fork, no 2-DOF motors)."""
-        return cls(tool="forque", ee_site="forque/fork_tip")
+        return cls(tool="forque")
 
     @classmethod
     def bare(cls) -> ADAConfig:
         """Config with no tool, no camera, no human (just arm on wheelchair)."""
-        return cls(tool=None, with_camera=False, with_human=False, ee_site="ee_site")
+        return cls(tool=None, with_camera=False, with_human=False)

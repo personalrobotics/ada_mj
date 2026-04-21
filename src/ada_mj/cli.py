@@ -44,7 +44,6 @@ def main() -> None:
         tool_tip=args.tool_tip,
         with_human=not args.no_human,
         with_camera=not args.no_camera,
-        ee_site=f"{tool}/fork_tip" if tool else "ee_site",
     )
 
     from ada_mj.robot import ADA
