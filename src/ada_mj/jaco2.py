@@ -92,6 +92,8 @@ def create_jaco2_arm(
     *,
     ee_site: str = "fork_tip",
     with_ik="auto",
+    extra_arm_body_names: list[str] | None = None,
+    grasp_manager=None,
 ) -> "Arm":
     """Create a JACO2 arm with mink IK (EAIK has no decomposition for this arm).
 
@@ -99,6 +101,8 @@ def create_jaco2_arm(
         env: MuJoCo environment containing the ADA model.
         ee_site: Name of the end-effector site.
         with_ik: IK solver mode (default "auto" → mink fallback).
+        extra_arm_body_names: Bodies to treat as part of the arm for
+            collision checking (e.g., welded tool root body).
 
     Returns:
         Arm ready for planning and execution.
@@ -116,8 +120,9 @@ def create_jaco2_arm(
             acceleration=JACO2_ACCELERATION_LIMITS.copy(),
         ),
         ee_site=ee_site,
+        extra_arm_body_names=extra_arm_body_names,
     )
 
     arm = Arm(env, config)
     ik_solver = resolve_ik_solver(arm, with_ik=with_ik)
-    return Arm(env, config, ik_solver=ik_solver)
+    return Arm(env, config, ik_solver=ik_solver, grasp_manager=grasp_manager)

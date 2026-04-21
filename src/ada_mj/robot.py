@@ -87,17 +87,32 @@ class ADA:
 
         self._env = Environment.from_model(self.model, self.data)
 
-        # Create the JACO2 arm
+        # Grasp manager — tracks the welded tool as a grasped object
+        # so the collision checker moves it with the arm during planning.
+        from mj_manipulator.grasp_manager import GraspManager
+
+        self._grasp_manager = GraspManager(self.model, self.data)
+
+        if self.config.tool is not None:
+            tool_body = f"{self.config.tool}/fork_base"
+            self._grasp_manager.mark_grasped(tool_body, "jaco2")
+            self._grasp_manager.attach_object(tool_body, "j2n6s200_link_6")
+
+        # Create the JACO2 arm — include tool bodies in collision set,
+        # pass grasp_manager so the planner moves the tool with the arm.
+        extra_bodies = None
+        if self.config.tool == "articutool":
+            extra_bodies = ["articutool/fork_base"]
+        elif self.config.tool == "forque":
+            extra_bodies = ["forque/fork_base"]
+
         self._arm = create_jaco2_arm(
             self._env,
             ee_site=self.config.ee_site,
             with_ik="auto",
+            extra_arm_body_names=extra_bodies,
+            grasp_manager=self._grasp_manager,
         )
-
-        # Grasp manager (shared, for future food grasping)
-        from mj_manipulator.grasp_manager import GraspManager
-
-        self._grasp_manager = GraspManager(self.model, self.data)
 
         # Articutool entity (if using articutool)
         self._articutool = None
@@ -145,6 +160,19 @@ class ADA:
         )
 
     # -- Internal helpers -----------------------------------------------------
+
+    def _snap_tool_to_weld(self) -> None:
+        """Reset tool freejoint qpos to the weld attachment site.
+
+        During physics, the freejoint drifts from the weld target.
+        Call before planning to ensure the planner's forked MjData
+        has the tool at the correct position.
+        """
+        if self.config.tool is None:
+            return
+        from ada_assets.assembly import TOOLS, _init_tool_pose
+
+        _init_tool_pose(self.model, self.data, self.config.tool, self.config.tool)
 
     def _init_ctrl_from_qpos(self) -> None:
         """Set ctrl to current joint positions so position actuators hold pose."""
