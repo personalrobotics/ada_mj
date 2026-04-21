@@ -88,6 +88,7 @@ IPython:
 
     extra_ns: dict = {
         "commands": commands,
+        "go_to": lambda pose_name: robot.go_to(pose_name),
     }
 
     # -- Panel setup callback (same pattern as geodude) -------------------------
@@ -98,6 +99,26 @@ IPython:
 
         all_panels = []
 
+        # Fix teleop ghost — the generic console creates it with empty prefix
+        # (shows full robot). Replace with tool prefix so only the fork shows.
+        tool_prefix = ""
+        if robot.config.tool == "articutool":
+            tool_prefix = "articutool/"
+        elif robot.config.tool == "forque":
+            tool_prefix = "forque/"
+        if tool_prefix:
+            for panel in viewer._panels:
+                if hasattr(panel, "_ghost") and panel._ghost is not None:
+                    panel._ghost.remove()
+                    from mj_viser.teleop_panel import GhostHand
+                    panel._ghost = GhostHand(
+                        viewer._server,
+                        robot.model,
+                        robot.data,
+                        gripper_body_prefix=tool_prefix,
+                        ee_site_id=robot.arm.ee_site_id,
+                    )
+
         with tabs.add_tab("ADA"):
             # Keyframe dropdown
             keyframe_names = []
@@ -107,14 +128,41 @@ IPython:
                     keyframe_names.append(name)
 
             if keyframe_names:
-                dropdown = gui.add_dropdown("Keyframe", keyframe_names)
+                import threading
+
+                initial = "stow" if "stow" in keyframe_names else keyframe_names[0]
+                dropdown = gui.add_dropdown("Keyframe", keyframe_names, initial_value=initial)
+
+                _last_keyframe = [initial]
 
                 @dropdown.on_update
                 def _on_keyframe(_: _viser.GuiEvent) -> None:
-                    key_id = mujoco.mj_name2id(robot.model, mujoco.mjtObj.mjOBJ_KEY, dropdown.value)
-                    if key_id >= 0:
-                        mujoco.mj_resetDataKeyframe(robot.model, robot.data, key_id)
-                        robot._init_ctrl_from_qpos()
+                    pose_name = dropdown.value
+                    if pose_name not in robot.named_poses:
+                        return
+                    if pose_name == _last_keyframe[0]:
+                        return
+                    _last_keyframe[0] = pose_name
+
+                    q_goal = robot.named_poses[pose_name].copy()
+                    ctx = robot._active_context
+                    if ctx is None:
+                        return
+
+                    # Plan on the physics thread (consistent MjData),
+                    # then execute (which starts its own runner).
+                    def _plan():
+                        return robot.arm.plan_to_configuration(q_goal)
+
+                    try:
+                        path = event_loop.run_on_physics_thread(_plan)
+                        if path is not None:
+                            traj = robot.arm.retime(path)
+                            ctx.execute(traj)
+                        else:
+                            logger.warning("Planning to %s failed", pose_name)
+                    except Exception as e:
+                        logger.warning("go_to(%s): %s", pose_name, e)
 
             # Articutool sliders — update PhysicsController entity target
             # so the controller drives the joints (same pattern as teleop
