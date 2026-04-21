@@ -109,7 +109,7 @@ def create_jaco2_arm(
     """
     from mj_manipulator.arm import Arm
     from mj_manipulator.arms._ik_factory import resolve_ik_solver
-    from mj_manipulator.config import ArmConfig, KinematicLimits
+    from mj_manipulator.config import ArmConfig, KinematicLimits, PlanningDefaults
 
     config = ArmConfig(
         name="jaco2",
@@ -121,6 +121,7 @@ def create_jaco2_arm(
         ),
         ee_site=ee_site,
         extra_arm_body_names=extra_arm_body_names,
+        planning_defaults=PlanningDefaults(smoothing_iterations=25),
     )
 
     arm = Arm(env, config)
