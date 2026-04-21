@@ -77,7 +77,7 @@ JACO2_EFFORT_LIMITS = np.array([40.0, 80.0, 40.0, 20.0, 20.0, 20.0])
 JACO2_ABOVE_PLATE = np.array([-2.579, 3.010, 1.770, -2.076, -1.791, 2.858])
 JACO2_RESTING = np.array([-1.860, 2.181, 0.364, -5.187, -0.470, -0.814])
 JACO2_STAGING = np.array([-2.122, 4.496, 4.022, -4.710, -2.493, -1.926])
-JACO2_STOW = np.array([-1.521, 2.601, 0.328, -4.000, 0.228, 3.879])
+JACO2_STOW = np.array([-1.521, 2.601, 0.348, -4.000, 0.228, 3.879])
 
 # Fingers locked holding the fork (from ada_moveit initial_positions.yaml)
 JACO2_FINGER_CLOSED = 1.33  # radians, both fingers

@@ -15,11 +15,13 @@ requires-python = ">=3.10"
 dependencies = [
     "numpy",
     "mujoco",
+    "ada-assets @ git+https://github.com/personalrobotics/ada_assets.git",
     "mj-manipulator @ git+https://github.com/personalrobotics/mj_manipulator.git",
     "mj-environment @ git+https://github.com/personalrobotics/mj_environment.git",
 ]
 
 [tool.uv.sources]
+ada-assets = { workspace = true }
 mj-manipulator = { workspace = true }
 mj-environment = { workspace = true }
 
