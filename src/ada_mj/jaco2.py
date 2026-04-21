@@ -55,12 +55,12 @@ JACO2_JOINT_RPYS = [
     [np.pi / 3, 0.0, np.pi],  # J6
 ]
 
-# Velocity limits (rad/s) from URDF; halved for conservative planning.
+# Velocity limits (rad/s) from URDF.
 # J1-3: 36°/s = 0.628 rad/s, J4-6: 48°/s = 0.838 rad/s
-JACO2_VELOCITY_LIMITS = np.array([0.628, 0.628, 0.628, 0.838, 0.838, 0.838]) * 0.5
+JACO2_VELOCITY_LIMITS = np.array([0.628, 0.628, 0.628, 0.838, 0.838, 0.838])
 
 # Acceleration limits — not published; derived from v_max / 0.1s
-JACO2_ACCELERATION_LIMITS = np.array([6.28, 6.28, 6.28, 8.38, 8.38, 8.38]) * 0.5
+JACO2_ACCELERATION_LIMITS = np.array([6.28, 6.28, 6.28, 8.38, 8.38, 8.38])
 
 # Position limits. Continuous joints (J1, J4, J5, J6) get full rotation.
 # J2 and J3 are revolute with limits from the URDF.
