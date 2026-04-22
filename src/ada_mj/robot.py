@@ -370,16 +370,16 @@ class ADA:
         Deactivates teleop, aborts running trajectories, resets MuJoCo
         state, and syncs the controller to the new positions.
         """
-        mujoco.mj_resetData(self.model, self.data)
-        key_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_KEY, "stow")
-        if key_id >= 0:
-            mujoco.mj_resetDataKeyframe(self.model, self.data, key_id)
-        self._init_ctrl_from_qpos()
-
         ctx = self._active_context
         if ctx is not None:
-            ctx.reset_state()
+            ctx.reset_to_keyframe("stow")
+            self._init_ctrl_from_qpos()
         else:
+            mujoco.mj_resetData(self.model, self.data)
+            key_id = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_KEY, "stow")
+            if key_id >= 0:
+                mujoco.mj_resetDataKeyframe(self.model, self.data, key_id)
+            self._init_ctrl_from_qpos()
             self.forward()
 
     def request_abort(self) -> None:
