@@ -99,26 +99,29 @@ IPython:
 
         all_panels = []
 
-        # Fix teleop ghost — the generic console creates it with empty prefix
-        # (shows full robot). Replace with tool prefix so only the fork shows.
+        # Add ghost hand for the tool — the generic console skips ghost
+        # creation when there's no gripper (ADA has no gripper, just a
+        # welded tool). Create the ghost here with the tool body prefix,
+        # parented to the gizmo so it moves with it.
         tool_prefix = ""
         if robot.config.tool == "articutool":
             tool_prefix = "articutool/"
         elif robot.config.tool == "forque":
             tool_prefix = "forque/"
         if tool_prefix:
-            for panel in viewer._panels:
-                if hasattr(panel, "_ghost") and panel._ghost is not None:
-                    panel._ghost.remove()
-                    from mj_viser.teleop_panel import GhostHand
+            from mj_viser.teleop_panel import GhostHand
 
-                    panel._ghost = GhostHand(
-                        viewer._server,
-                        robot.model,
-                        robot.data,
-                        gripper_body_prefix=tool_prefix,
-                        ee_site_id=robot.arm.ee_site_id,
-                    )
+            for panel in viewer._panels:
+                if not hasattr(panel, "_gizmo") or panel._gizmo is None:
+                    continue
+                panel._ghost = GhostHand(
+                    viewer._server,
+                    robot.model,
+                    robot.data,
+                    gripper_body_prefix=tool_prefix,
+                    ee_site_id=robot.arm.ee_site_id,
+                    name=f"{panel._gizmo.name}/ghost",
+                )
 
         with tabs.add_tab("ADA"):
             # Keyframe dropdown
