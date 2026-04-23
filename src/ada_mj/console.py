@@ -111,6 +111,7 @@ IPython:
                 if hasattr(panel, "_ghost") and panel._ghost is not None:
                     panel._ghost.remove()
                     from mj_viser.teleop_panel import GhostHand
+
                     panel._ghost = GhostHand(
                         viewer._server,
                         robot.model,
@@ -128,41 +129,72 @@ IPython:
                     keyframe_names.append(name)
 
             if keyframe_names:
-                import threading
+                import numpy as np
 
                 initial = "stow" if "stow" in keyframe_names else keyframe_names[0]
                 dropdown = gui.add_dropdown("Keyframe", keyframe_names, initial_value=initial)
 
-                _last_keyframe = [initial]
+                # Tolerance for matching joint config to a named pose (rad)
+                _KEYFRAME_TOL = 0.05
+                _moving = [False]
+
+                def _current_keyframe() -> str | None:
+                    """Return the named pose matching the arm's actual joints, or None."""
+                    q = robot.arm.get_joint_positions()
+                    for name, q_target in robot.named_poses.items():
+                        if np.max(np.abs(q - np.array(q_target))) < _KEYFRAME_TOL:
+                            return name
+                    return None
 
                 @dropdown.on_update
                 def _on_keyframe(_: _viser.GuiEvent) -> None:
+                    if _moving[0]:
+                        return  # ignore clicks while moving
                     pose_name = dropdown.value
                     if pose_name not in robot.named_poses:
                         return
-                    if pose_name == _last_keyframe[0]:
-                        return
-                    _last_keyframe[0] = pose_name
 
                     q_goal = robot.named_poses[pose_name].copy()
                     ctx = robot._active_context
                     if ctx is None:
                         return
 
-                    # Plan on the physics thread (consistent MjData),
-                    # then execute (which starts its own runner).
-                    def _plan():
-                        return robot.arm.plan_to_configuration(q_goal)
+                    _moving[0] = True
+                    dropdown.disabled = True
 
-                    try:
-                        path = event_loop.run_on_physics_thread(_plan)
+                    def _plan_and_execute():
+                        # Check on physics thread (safe MuJoCo access)
+                        if _current_keyframe() == pose_name:
+                            return  # already there
+                        path = robot.arm.plan_to_configuration(q_goal)
                         if path is not None:
                             traj = robot.arm.retime(path)
                             ctx.execute(traj)
                         else:
                             logger.warning("Planning to %s failed", pose_name)
+
+                    try:
+                        event_loop.run_on_physics_thread(_plan_and_execute)
                     except Exception as e:
                         logger.warning("go_to(%s): %s", pose_name, e)
+                    finally:
+                        _moving[0] = False
+                        dropdown.disabled = False
+
+                # Sync dropdown to actual arm position each frame
+                class _KeyframeSyncPanel:
+                    def setup(self, gui, viewer):
+                        pass
+
+                    def on_sync(self, viewer):
+                        if _moving[0]:
+                            return
+                        actual = _current_keyframe()
+                        if actual is not None and dropdown.value != actual:
+                            dropdown.value = actual
+
+                _kf_sync = _KeyframeSyncPanel()
+                viewer._panels.append(_kf_sync)
 
             # Articutool sliders — update PhysicsController entity target
             # so the controller drives the joints (same pattern as teleop
@@ -173,10 +205,18 @@ IPython:
                 atool = robot.articutool
 
                 tilt_slider = gui.add_slider(
-                    "Tilt (joint1)", min=-1.5708, max=1.5708, step=0.01, initial_value=0.0,
+                    "Tilt (joint1)",
+                    min=-1.5708,
+                    max=1.5708,
+                    step=0.01,
+                    initial_value=0.0,
                 )
                 roll_slider = gui.add_slider(
-                    "Roll (joint2)", min=-3.14159, max=3.14159, step=0.01, initial_value=0.0,
+                    "Roll (joint2)",
+                    min=-3.14159,
+                    max=3.14159,
+                    step=0.01,
+                    initial_value=0.0,
                 )
 
                 def _set_tool_target(tilt: float, roll: float) -> None:
