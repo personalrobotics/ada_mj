@@ -150,16 +150,23 @@ IPython:
                     _moving[0] = True
                     dropdown.disabled = True
 
-                    def _plan_and_execute():
-                        path = robot.arm.plan_to_configuration(q_goal)
-                        if path is not None:
-                            traj = robot.arm.retime(path)
-                            ctx.execute(traj)
-                        else:
-                            logger.warning("Planning to %s failed", pose_name)
-
                     try:
-                        event_loop.run_on_physics_thread(_plan_and_execute)
+                        # Plan on the physics thread (needs consistent MjData)
+                        def _plan():
+                            return robot.arm.plan_to_configuration(q_goal)
+
+                        path = event_loop.run_on_physics_thread(_plan)
+                        if path is None:
+                            logger.warning("Planning to %s failed", pose_name)
+                            return
+
+                        traj = robot.arm.retime(path)
+
+                        # Execute from this (background) thread — the tick-driven
+                        # executor submits a runner and the inputhook pumps ticks.
+                        # We must NOT use run_on_physics_thread here because that
+                        # would run inside tick(), hitting the reentrancy guard.
+                        ctx.execute(traj)
                     except Exception as e:
                         logger.warning("go_to(%s): %s", pose_name, e)
                     finally:
