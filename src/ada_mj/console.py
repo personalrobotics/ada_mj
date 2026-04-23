@@ -129,49 +129,52 @@ IPython:
                     keyframe_names.append(name)
 
             if keyframe_names:
-                initial = "stow" if "stow" in keyframe_names else keyframe_names[0]
-                dropdown = gui.add_dropdown("Keyframe", keyframe_names, initial_value=initial)
-
                 _moving = [False]
 
-                @dropdown.on_update
-                def _on_keyframe(_: _viser.GuiEvent) -> None:
-                    if _moving[0]:
-                        return
-                    pose_name = dropdown.value
-                    if pose_name not in robot.named_poses:
-                        return
+                # One button per keyframe — no stale selection state
+                _keyframe_btns = {}
+                for kf_name in keyframe_names:
+                    if kf_name not in robot.named_poses:
+                        continue
+                    btn = gui.add_button(kf_name.replace("_", " ").title())
+                    _keyframe_btns[kf_name] = btn
 
-                    q_goal = robot.named_poses[pose_name].copy()
-                    ctx = robot._active_context
-                    if ctx is None:
-                        return
+                    def _make_handler(name):
+                        def _on_click(_: _viser.GuiEvent) -> None:
+                            if _moving[0]:
+                                return
 
-                    _moving[0] = True
-                    dropdown.disabled = True
+                            q_goal = robot.named_poses[name].copy()
+                            ctx = robot._active_context
+                            if ctx is None:
+                                return
 
-                    try:
-                        # Plan on the physics thread (needs consistent MjData)
-                        def _plan():
-                            return robot.arm.plan_to_configuration(q_goal)
+                            _moving[0] = True
+                            for b in _keyframe_btns.values():
+                                b.disabled = True
 
-                        path = event_loop.run_on_physics_thread(_plan)
-                        if path is None:
-                            logger.warning("Planning to %s failed", pose_name)
-                            return
+                            try:
 
-                        traj = robot.arm.retime(path)
+                                def _plan():
+                                    return robot.arm.plan_to_configuration(q_goal)
 
-                        # Execute from this (background) thread — the tick-driven
-                        # executor submits a runner and the inputhook pumps ticks.
-                        # We must NOT use run_on_physics_thread here because that
-                        # would run inside tick(), hitting the reentrancy guard.
-                        ctx.execute(traj)
-                    except Exception as e:
-                        logger.warning("go_to(%s): %s", pose_name, e)
-                    finally:
-                        _moving[0] = False
-                        dropdown.disabled = False
+                                path = event_loop.run_on_physics_thread(_plan)
+                                if path is None:
+                                    logger.warning("Planning to %s failed", name)
+                                    return
+
+                                traj = robot.arm.retime(path)
+                                ctx.execute(traj)
+                            except Exception as e:
+                                logger.warning("go_to(%s): %s", name, e)
+                            finally:
+                                _moving[0] = False
+                                for b in _keyframe_btns.values():
+                                    b.disabled = False
+
+                        return _on_click
+
+                    btn.on_click(_make_handler(kf_name))
 
             # Articutool sliders — update PhysicsController entity target
             # so the controller drives the joints (same pattern as teleop
