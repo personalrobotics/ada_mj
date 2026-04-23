@@ -129,27 +129,15 @@ IPython:
                     keyframe_names.append(name)
 
             if keyframe_names:
-                import numpy as np
-
                 initial = "stow" if "stow" in keyframe_names else keyframe_names[0]
                 dropdown = gui.add_dropdown("Keyframe", keyframe_names, initial_value=initial)
 
-                # Tolerance for matching joint config to a named pose (rad)
-                _KEYFRAME_TOL = 0.05
                 _moving = [False]
-
-                def _current_keyframe() -> str | None:
-                    """Return the named pose matching the arm's actual joints, or None."""
-                    q = robot.arm.get_joint_positions()
-                    for name, q_target in robot.named_poses.items():
-                        if np.max(np.abs(q - np.array(q_target))) < _KEYFRAME_TOL:
-                            return name
-                    return None
 
                 @dropdown.on_update
                 def _on_keyframe(_: _viser.GuiEvent) -> None:
                     if _moving[0]:
-                        return  # ignore clicks while moving
+                        return
                     pose_name = dropdown.value
                     if pose_name not in robot.named_poses:
                         return
@@ -163,9 +151,6 @@ IPython:
                     dropdown.disabled = True
 
                     def _plan_and_execute():
-                        # Check on physics thread (safe MuJoCo access)
-                        if _current_keyframe() == pose_name:
-                            return  # already there
                         path = robot.arm.plan_to_configuration(q_goal)
                         if path is not None:
                             traj = robot.arm.retime(path)
@@ -180,21 +165,6 @@ IPython:
                     finally:
                         _moving[0] = False
                         dropdown.disabled = False
-
-                # Sync dropdown to actual arm position each frame
-                class _KeyframeSyncPanel:
-                    def setup(self, gui, viewer):
-                        pass
-
-                    def on_sync(self, viewer):
-                        if _moving[0]:
-                            return
-                        actual = _current_keyframe()
-                        if actual is not None and dropdown.value != actual:
-                            dropdown.value = actual
-
-                _kf_sync = _KeyframeSyncPanel()
-                viewer._panels.append(_kf_sync)
 
             # Articutool sliders — update PhysicsController entity target
             # so the controller drives the joints (same pattern as teleop
