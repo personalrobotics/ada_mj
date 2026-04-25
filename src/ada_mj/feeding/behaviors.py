@@ -208,19 +208,21 @@ def transfer_to_mouth(
 ) -> Outcome:
     """Move the loaded fork to the user's mouth.
 
-    Two phases:
-    1. Plan and execute trajectory to a staging pose near the mouth
-    2. Servo the final approach with deceleration and F/T monitoring
+    Servos from the current pose (staging) toward the mouth position,
+    maintaining the current fork orientation. The speed profile
+    decelerates from 0.15 m/s to 0.06 m/s near the mouth.
+    F/T threshold is 1N — sensitive to detect lip/face contact.
 
-    The speed profile decelerates from 0.15 m/s to 0.06 m/s as the
-    fork approaches the mouth (over the last 30cm). F/T threshold is
-    1N — very sensitive to detect lip/face contact.
+    The fork orientation is set by the staging pose (which the planner
+    achieved). The servo preserves it — we translate to the mouth,
+    we don't rotate to match the mouth frame.
     """
-    # Compute approach target: offset from mouth by fork length
-    # The fork approaches along the mouth's +x axis (forward out of mouth)
+    # Target: mouth position, current fork orientation.
+    # The mouth frame orientation is the face's forward direction —
+    # not related to how the fork should be oriented.
     approach_distance = 0.02  # stop 2cm from mouth
-    target = mouth_pose.copy()
-    target[:3, 3] += mouth_pose[:3, 0] * approach_distance
+    target = arm.get_ee_pose().copy()  # keep current orientation
+    target[:3, 3] = mouth_pose[:3, 3] + mouth_pose[:3, 0] * approach_distance
 
     return servo_to_pose(
         target,
