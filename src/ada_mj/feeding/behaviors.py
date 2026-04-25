@@ -229,6 +229,7 @@ def transfer_to_mouth(
         speed_profile=MOUTH_APPROACH_SPEED,
         ft_threshold=MOUTH_FT_THRESHOLD,
         position_tol=MOUTH_POSITION_TOL,
+        ignore_orientation=True,
         timeout=15.0,
     )
 
