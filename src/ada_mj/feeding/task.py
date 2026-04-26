@@ -90,7 +90,7 @@ def feed_bite(
     if not result:
         return result
 
-    # 6. Level fork for transport (prevent food from sliding off)
+    # 6. Level fork for transport (best-effort — proceed even if leveling fails)
     level_fork(arm=arm, ctx=ctx)
 
     # 7. Detect mouth

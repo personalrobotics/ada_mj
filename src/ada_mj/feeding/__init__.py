@@ -14,3 +14,20 @@ Usage::
     if not result:
         print(f"Failed: {result.failure_kind.value}")
 """
+
+from ada_mj.feeding.domain import (
+    AcquisitionSchema,
+    FoodItem,
+    ForkState,
+    straight_skewer,
+)
+from ada_mj.feeding.task import feed_bite, feeding_demo
+
+__all__ = [
+    "AcquisitionSchema",
+    "FoodItem",
+    "ForkState",
+    "feed_bite",
+    "feeding_demo",
+    "straight_skewer",
+]

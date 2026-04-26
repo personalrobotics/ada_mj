@@ -23,6 +23,7 @@ import numpy as np
 from mj_manipulator.force_control import ForceThresholds
 from mj_manipulator.outcome import FailureKind, Outcome, failure, success
 from mj_manipulator.servo import ft_guarded_move, servo_to_pose
+from mj_manipulator.teleop import SafetyMode
 
 from ada_mj.feeding.domain import (
     MOUTH_APPROACH_SPEED,
@@ -115,6 +116,9 @@ def tilt_fork(angle: float, *, ctx: ExecutionContext) -> Outcome:
     Controls the fork pitch for skewering (tilted down) or
     leveling (horizontal for transport).
     """
+    # NOTE: accesses Controller._entities directly because there's no
+    # public API for entity target control yet. When one is added, this
+    # should use it instead.
     controller = ctx._controller
     if controller is None:
         return failure(FailureKind.PRECONDITION_FAILED, "tilt_fork:no_controller")
@@ -145,8 +149,6 @@ def acquire_food(
     monitoring F/T against grasp_thresholds. Contact detection
     (threshold exceeded) is expected — it means the fork hit food.
     """
-    from mj_manipulator.teleop import SafetyMode
-
     result = ft_guarded_move(
         schema.insertion_twist,
         arm,
