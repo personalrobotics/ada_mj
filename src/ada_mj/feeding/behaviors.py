@@ -20,6 +20,7 @@ import logging
 from typing import TYPE_CHECKING
 
 import numpy as np
+from mj_manipulator.force_control import ForceThresholds
 from mj_manipulator.outcome import FailureKind, Outcome, failure, success
 from mj_manipulator.servo import ft_guarded_move, servo_to_pose
 
@@ -68,35 +69,44 @@ def move_above(
     """Plan and execute motion to the approach pose above a food item.
 
     The approach pose is the food position offset by the schema's
-    approach_offset (typically a few cm above).
+    approach_offset (typically a few cm above). Uses IK + planner if
+    an IK solver is available, otherwise plans to the target pose
+    directly.
     """
     target_pos = food.position + schema.approach_offset
+
+    # Build target pose: food approach position, current EE orientation
+    target_pose = arm.get_ee_pose().copy()
+    target_pose[:3, 3] = target_pos
+
+    # Try IK → plan_to_configuration (precise, works for EAIK arms)
     q_goal = _ik_to_position(arm, target_pos)
-    if q_goal is None:
-        return failure(
-            FailureKind.PLANNING_FAILED,
-            "move_above:no_ik_solution",
-            food=food.name,
-            target_pos=target_pos.tolist(),
-        )
+    if q_goal is not None:
+        path = arm.plan_to_configuration(q_goal)
+        if path is not None:
+            traj = arm.retime(path)
+            if ctx.execute(traj):
+                return success(food=food.name)
+            return failure(
+                FailureKind.EXECUTION_FAILED,
+                "move_above:execution_failed",
+                food=food.name,
+            )
 
-    path = arm.plan_to_configuration(q_goal)
-    if path is None:
-        return failure(
-            FailureKind.PLANNING_FAILED,
-            "move_above:no_path",
-            food=food.name,
-        )
+    # Fallback: plan_to_pose (for arms without IK, e.g., JACO2 with mink)
+    if hasattr(arm, "plan_to_pose"):
+        path = arm.plan_to_pose(target_pose)
+        if path is not None:
+            traj = arm.retime(path)
+            if ctx.execute(traj):
+                return success(food=food.name)
 
-    traj = arm.retime(path)
-    if not ctx.execute(traj):
-        return failure(
-            FailureKind.EXECUTION_FAILED,
-            "move_above:execution_failed",
-            food=food.name,
-        )
-
-    return success(food=food.name)
+    return failure(
+        FailureKind.PLANNING_FAILED,
+        "move_above:no_path",
+        food=food.name,
+        target_pos=target_pos.tolist(),
+    )
 
 
 def tilt_fork(angle: float, *, ctx: ExecutionContext) -> Outcome:
@@ -135,12 +145,15 @@ def acquire_food(
     monitoring F/T against grasp_thresholds. Contact detection
     (threshold exceeded) is expected — it means the fork hit food.
     """
+    from mj_manipulator.teleop import SafetyMode
+
     result = ft_guarded_move(
         schema.insertion_twist,
         arm,
         ctx,
         ft_threshold=schema.grasp_thresholds,
         duration=schema.insertion_duration,
+        safety_mode=SafetyMode.ALLOW,  # contact with food is expected
     )
     if not result:
         return result
@@ -167,12 +180,15 @@ def extract_food(
     Applies the schema's extraction_twist with extraction_thresholds.
     High thresholds (50N) allow pulling through resistance.
     """
+    from mj_manipulator.teleop import SafetyMode
+
     return ft_guarded_move(
         schema.extraction_twist,
         arm,
         ctx,
         ft_threshold=schema.extraction_thresholds,
         duration=schema.extraction_duration,
+        safety_mode=SafetyMode.ALLOW,  # pulling through food resistance is expected
     )
 
 
@@ -190,13 +206,22 @@ def level_fork(*, arm: Arm, ctx: ExecutionContext) -> Outcome:
     return tilt_fork(0.0, ctx=ctx)
 
 
-def detect_mouth(robot) -> np.ndarray:
+def detect_mouth(robot) -> np.ndarray | None:
     """Read the mouth site pose from the head model.
 
+    In simulation, reads the MuJoCo site directly. On hardware,
+    this would dispatch to face detection (MediaPipe/YOLO + depth).
+
     Returns:
-        4x4 world-frame transform of the mouth.
+        4x4 world-frame transform of the mouth, or None if
+        unavailable (e.g., head not in model, face not detected).
     """
-    return robot.head.get_mouth_pose()
+    if not hasattr(robot, "head") or robot.head is None:
+        return None
+    try:
+        return robot.head.get_mouth_pose()
+    except Exception:
+        return None
 
 
 def transfer_to_mouth(
@@ -204,7 +229,6 @@ def transfer_to_mouth(
     *,
     arm: Arm,
     ctx: ExecutionContext,
-    abort_fn=None,
 ) -> Outcome:
     """Move the loaded fork to the user's mouth.
 
@@ -246,8 +270,6 @@ def wait_for_bite(
     Holds position and monitors F/T. Returns success when force exceeds
     the bite detection threshold or timeout elapses.
     """
-    from mj_manipulator.force_control import ForceThresholds
-
     bite_threshold = ForceThresholds(force_n=2.0, torque_nm=1.0)
 
     # Zero twist — hold position, just monitor F/T
@@ -262,19 +284,26 @@ def wait_for_bite(
 
 
 def retract_from_mouth(
+    mouth_pose: np.ndarray,
     *,
     arm: Arm,
     ctx: ExecutionContext,
+    retract_distance: float = 0.15,
 ) -> Outcome:
-    """Retract the fork from the mouth area.
+    """Retract the fork away from the mouth.
 
-    Servos backward from the current position with the retraction
-    speed profile (slightly faster than approach).
+    Moves the EE along the mouth's approach axis (+x of mouth frame),
+    away from the face. Maintains current fork orientation.
+
+    Args:
+        mouth_pose: 4x4 mouth pose (for approach axis direction).
+        arm: Arm instance.
+        ctx: Execution context.
+        retract_distance: How far to retract (meters).
     """
-    # Retract 15cm straight back along -x of current EE frame
-    ee_pose = arm.get_ee_pose()
-    target = ee_pose.copy()
-    target[:3, 3] -= ee_pose[:3, 0] * 0.15  # 15cm back along approach axis
+    mouth_approach_axis = mouth_pose[:3, 0]  # +x = forward out of mouth
+    target = arm.get_ee_pose().copy()
+    target[:3, 3] += mouth_approach_axis * retract_distance
 
     return servo_to_pose(
         target,

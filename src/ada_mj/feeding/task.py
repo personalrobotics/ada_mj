@@ -93,17 +93,24 @@ def feed_bite(
     # 6. Level fork for transport (prevent food from sliding off)
     level_fork(arm=arm, ctx=ctx)
 
-    # 7. Move to mouth
+    # 7. Detect mouth
     mouth_pose = detect_mouth(robot)
+    if mouth_pose is None:
+        return failure(
+            FailureKind.PERCEPTION_FAILED,
+            "feed_bite:mouth_not_detected",
+        )
+
+    # 8. Move to mouth
     result = transfer_to_mouth(mouth_pose, arm=arm, ctx=ctx)
     if not result:
         return result
 
-    # 8. Wait for bite
+    # 9. Wait for bite
     wait_for_bite(arm=arm, ctx=ctx, timeout=10.0)
 
-    # 9. Retract from mouth
-    retract_from_mouth(arm=arm, ctx=ctx)
+    # 10. Retract from mouth (along mouth approach axis)
+    retract_from_mouth(mouth_pose, arm=arm, ctx=ctx)
 
     logger.info("Feed bite complete: %s", food.name)
     return success(food=food.name)
