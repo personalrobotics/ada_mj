@@ -122,6 +122,8 @@ def create_jaco2_arm(
         ee_site=ee_site,
         extra_arm_body_names=extra_arm_body_names,
         planning_defaults=PlanningDefaults(smoothing_iterations=25),
+        max_cartesian_speed=0.06,   # near humans, conservative
+        max_cartesian_angular=0.3,
     )
 
     arm = Arm(env, config)
