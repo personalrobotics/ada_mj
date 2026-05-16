@@ -68,13 +68,15 @@ def feed_bite(
     if not result:
         return result
 
-    # 2. Move above the food item
-    result = move_above(food, schema, arm=arm, ctx=ctx)
+    # 2. Tilt fork for acquisition.
+    # Done before move_above so the articutool pose is fixed when ForkTSR
+    # captures T_ee_to_fork_tip and the planner solves arm IK.
+    result = tilt_fork(schema.tilt_angle, ctx=ctx)
     if not result:
         return result
 
-    # 3. Tilt fork for acquisition
-    result = tilt_fork(schema.tilt_angle, ctx=ctx)
+    # 3. Move above the food item
+    result = move_above(food, schema, arm=arm, ctx=ctx, fork_tsr=robot.fork_tsr)
     if not result:
         return result
 
