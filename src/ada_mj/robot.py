@@ -190,15 +190,23 @@ class ADA:
     # -- Model building -------------------------------------------------------
 
     def _build_model(self) -> tuple[mujoco.MjModel, mujoco.MjData]:
-        """Build the MuJoCo model from ada_assets."""
-        from ada_assets.assembly import assemble_ada
-
-        return assemble_ada(
+        """Build the MuJoCo model — base ADA robot plus the configured demo scene."""
+        kwargs = dict(
             tool=self.config.tool,
             tool_tip=self.config.tool_tip,
             with_human=self.config.with_human,
             with_camera=self.config.with_camera,
         )
+        scene = self.config.scene
+        if scene == "none":
+            from ada_assets.assembly import assemble_ada
+
+            return assemble_ada(**kwargs)
+        if scene == "table":
+            from ada_mj.scenes import assemble_table_demo
+
+            return assemble_table_demo(**kwargs)
+        raise ValueError(f"Unknown scene '{self.config.scene}'. Available: 'none', 'table'.")
 
     # -- Core access ----------------------------------------------------------
 

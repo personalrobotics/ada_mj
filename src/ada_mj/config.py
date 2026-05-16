@@ -91,6 +91,11 @@ class ADAConfig:
     with_human: bool = True
     with_camera: bool = True
 
+    # Demo scene — extends the bare robot with task-specific furniture/objects.
+    # Currently supported: "none" (just the robot), "table" (over-bed table +
+    # plate of food for the feeding demo).
+    scene: str = "table"
+
     # End-effector site — must be on the arm's kinematic chain (link_6),
     # not on the tool (freejoint body). IK can only move arm joints.
     ee_site: str = "ee_site"
@@ -115,4 +120,4 @@ class ADAConfig:
     @classmethod
     def bare(cls) -> ADAConfig:
         """Config with no tool, no camera, no human (just arm on wheelchair)."""
-        return cls(tool=None, with_camera=False, with_human=False)
+        return cls(tool=None, with_camera=False, with_human=False, scene="none")
