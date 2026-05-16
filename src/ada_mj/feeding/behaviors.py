@@ -66,47 +66,58 @@ def move_above(
     *,
     arm: Arm,
     ctx: ExecutionContext,
+    fork_tsr,
+    xy_slop: float = 0.008,
 ) -> Outcome:
-    """Plan and execute motion to the approach pose above a food item.
+    """Plan and execute motion to a fork-tip-above-food pose.
 
-    The approach pose is the food position offset by the schema's
-    approach_offset (typically a few cm above). Uses IK + planner if
-    an IK solver is available, otherwise plans to the target pose
-    directly.
+    Builds a placement TSR over the food using ``ForkTSR.above_plate``
+    (fork tip pointing down, x/y free within ``xy_slop`` of the food,
+    yaw free, z at the schema's hover height above the food), then
+    calls ``arm.plan_to_tsrs`` so the planner picks any collision-free
+    configuration in that region.
+
+    Args:
+        food: Target food item (world-frame position).
+        schema: Acquisition schema; ``schema.approach_offset[2]`` sets the
+            hover height above the food (in meters).
+        arm: The arm to plan with.
+        ctx: Execution context (sim or hardware).
+        fork_tsr: Fork TSR generator (``robot.fork_tsr``).
+        xy_slop: Half-width of the xy region the planner may pick the
+            fork tip within, around the food's xy (meters). Tight by
+            default so the subsequent acquisition stab actually hits the
+            food.
     """
-    target_pos = food.position + schema.approach_offset
+    hover_height = abs(float(schema.approach_offset[2]))
 
-    # Build target pose: food approach position, current EE orientation
-    target_pose = arm.get_ee_pose().copy()
-    target_pose[:3, 3] = target_pos
+    # Reference frame: food position, identity rotation (z-up world).
+    T_food_world = np.eye(4)
+    T_food_world[:3, 3] = food.position
 
-    # Try IK → plan_to_configuration (precise, works for EAIK arms)
-    q_goal = _ik_to_position(arm, target_pos)
-    if q_goal is not None:
-        path = arm.plan_to_configuration(q_goal)
-        if path is not None:
-            traj = arm.retime(path)
-            if ctx.execute(traj):
-                return success(food=food.name)
-            return failure(
-                FailureKind.EXECUTION_FAILED,
-                "move_above:execution_failed",
-                food=food.name,
-            )
+    # k=1 → single height template at exactly hover_height; the planner
+    # gets x/y slop and yaw freedom but pins the tip at the requested z.
+    templates = fork_tsr.above_plate(
+        plate_radius=xy_slop, hover_height=hover_height, k=1,
+    )
+    goal_tsrs = [t.instantiate(T_food_world) for t in templates]
 
-    # Fallback: plan_to_pose (for arms without IK, e.g., JACO2 with mink)
-    if hasattr(arm, "plan_to_pose"):
-        path = arm.plan_to_pose(target_pose)
-        if path is not None:
-            traj = arm.retime(path)
-            if ctx.execute(traj):
-                return success(food=food.name)
+    path = arm.plan_to_tsrs(goal_tsrs)
+    if path is None:
+        return failure(
+            FailureKind.PLANNING_FAILED,
+            "move_above:no_path",
+            food=food.name,
+            food_pos=food.position.tolist(),
+        )
 
+    traj = arm.retime(path)
+    if ctx.execute(traj):
+        return success(food=food.name)
     return failure(
-        FailureKind.PLANNING_FAILED,
-        "move_above:no_path",
+        FailureKind.EXECUTION_FAILED,
+        "move_above:execution_failed",
         food=food.name,
-        target_pos=target_pos.tolist(),
     )
 
 
@@ -316,27 +327,3 @@ def retract_from_mouth(
     )
 
 
-# ---------------------------------------------------------------------------
-# Internal helpers
-# ---------------------------------------------------------------------------
-
-
-def _ik_to_position(arm: Arm, position: np.ndarray) -> np.ndarray | None:
-    """Solve IK for a target position, keeping current orientation.
-
-    Returns the closest joint configuration or None if unreachable.
-    """
-    target_pose = arm.get_ee_pose().copy()
-    target_pose[:3, 3] = position
-
-    if arm.ik_solver is None:
-        return None
-
-    solutions = arm.ik_solver.solve(target_pose, q_init=arm.get_joint_positions())
-    if not solutions:
-        return None
-
-    # Pick closest to current
-    q_current = arm.get_joint_positions()
-    best = min(solutions, key=lambda q: float(np.linalg.norm(np.array(q) - q_current)))
-    return np.array(best)

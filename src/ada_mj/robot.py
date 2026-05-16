@@ -128,6 +128,9 @@ class ADA:
 
             self._head = HeadController(self.model, self.data, self.config.head)
 
+        # Fork TSR generator — constructed lazily on first use via .fork_tsr
+        self._fork_tsr = None
+
         # Wrist camera (if camera present)
         self._camera = None
         if self.config.with_camera:
@@ -170,7 +173,7 @@ class ADA:
         """
         if self.config.tool is None:
             return
-        from ada_assets.assembly import TOOLS, _init_tool_pose
+        from ada_assets.assembly import _init_tool_pose
 
         _init_tool_pose(self.model, self.data, self.config.tool, self.config.tool)
 
@@ -239,6 +242,27 @@ class ADA:
     def grasp_manager(self) -> GraspManager:
         """Shared grasp manager."""
         return self._grasp_manager
+
+    @property
+    def fork_tsr(self):
+        """Fork TSR generator (lazy, cached).
+
+        Reads ``T_ee_to_fork_tip`` live from the model at each call so the
+        TSR tracks articutool joint changes. Requires a fork-bearing tool
+        (``articutool`` or ``forque``) — raises ``ValueError`` otherwise.
+        """
+        if self._fork_tsr is None:
+            if self.config.tool is None:
+                raise ValueError("fork_tsr requires a fork-bearing tool (articutool or forque)")
+            from ada_mj.feeding.fork_tsr import ForkTSR
+
+            self._fork_tsr = ForkTSR(
+                model=self.model,
+                data=self.data,
+                ee_site_name=self.config.ee_site,
+                tip_site_name=f"{self.config.tool}/fork_tip",
+            )
+        return self._fork_tsr
 
     @property
     def named_poses(self) -> dict[str, np.ndarray]:
