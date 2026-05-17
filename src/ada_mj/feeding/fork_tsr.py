@@ -51,18 +51,52 @@ class ForkTSR:
         self._data = data
         self._ee_site_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_SITE, ee_site_name)
         self._tip_site_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_SITE, tip_site_name)
+        # Tool prefix derived from the tip site name (e.g. "articutool/fork_tip"
+        # → "articutool"). Used to re-snap the welded tool freejoint when the
+        # caller has changed arm joints without running the controller.
+        self._tool = tip_site_name.split("/")[0] if "/" in tip_site_name else None
 
         if self._ee_site_id < 0:
             raise ValueError(f"EE site '{ee_site_name}' not found")
         if self._tip_site_id < 0:
             raise ValueError(f"Fork tip site '{tip_site_name}' not found")
 
+    def _snap_and_forward(self) -> None:
+        """Snap the welded tool freejoint to the current arm pose, then
+        run forward kinematics so site positions reflect the snap.
+
+        Without this, callers that change arm joints directly (e.g.
+        ``arm.set_joint_positions`` between sim contexts) leave the tool
+        freejoint at its old world position. The fork tip site we read
+        would then describe a stale weld, and any TSR built from that
+        would target the wrong EE pose.
+        """
+        import mujoco as mj
+
+        if self._tool is not None:
+            from ada_assets.assembly import _init_tool_pose
+
+            _init_tool_pose(self._model, self._data, self._tool, self._tool)
+        mj.mj_forward(self._model, self._data)
+
+    def tip_world_pos(self) -> np.ndarray:
+        """Current fork tip position in world frame.
+
+        Snaps the tool freejoint to its weld attachment, runs forward
+        kinematics, and returns the resulting fork-tip site position.
+        """
+        self._snap_and_forward()
+        return self._data.site_xpos[self._tip_site_id].copy()
+
     def _get_T_ee_to_tip(self) -> np.ndarray:
         """Compute the current EE-to-fork-tip transform from the model.
 
-        Must be called after mj_forward so site poses are up to date.
+        Snaps the tool freejoint to its weld first, runs forward
+        kinematics, and reads site poses — so the captured transform
+        reflects the actual welded geometry.
         The transform changes with articutool joint angles.
         """
+        self._snap_and_forward()
         T_world_ee = self._site_pose(self._ee_site_id)
         T_world_tip = self._site_pose(self._tip_site_id)
         return np.linalg.inv(T_world_ee) @ T_world_tip
@@ -103,9 +137,6 @@ class ForkTSR:
         Returns:
             List of TSRTemplates. Instantiate with the plate's world pose.
         """
-        import mujoco
-
-        mujoco.mj_forward(self._model, self._data)
         T_ee_tip = self._get_T_ee_to_tip()
 
         # TSR frame: at plate surface, z-up.
@@ -192,9 +223,6 @@ class ForkTSR:
         Returns:
             List of TSRTemplates. Instantiate with the mouth's world pose.
         """
-        import mujoco
-
-        mujoco.mj_forward(self._model, self._data)
         T_ee_tip = self._get_T_ee_to_tip()
         T_tip_ee = np.linalg.inv(T_ee_tip)
 

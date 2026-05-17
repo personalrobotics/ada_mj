@@ -104,7 +104,7 @@ def feed_bite(
         )
 
     # 8. Move to mouth
-    result = transfer_to_mouth(mouth_pose, arm=arm, ctx=ctx)
+    result = transfer_to_mouth(mouth_pose, arm=arm, ctx=ctx, fork_tsr=robot.fork_tsr)
     if not result:
         return result
 
