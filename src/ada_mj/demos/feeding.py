@@ -1,0 +1,121 @@
+# SPDX-License-Identifier: MIT
+# Copyright (c) 2025 Siddhartha Srinivasa
+
+"""Feeding demo — acquire food from the plate and deliver it to the mouth.
+
+Helpers available in the console after launching with ``--demo feeding``:
+
+  food_items()              — list of FoodItem instances for the food bodies
+                              currently in the scene
+  feed(food=None)           — run one feed_bite cycle for ``food`` (defaults
+                              to the first food on the plate)
+  feed_all()                — run feed_bite for each food item in order
+  move_above_food(food=None)— just the pre-acquisition phase (TSR-plan the
+                              fork tip above a food item, schema-tilted)
+  transfer(plan=0.15, servo=0.10)
+                            — just the mouth-transfer phase (TSR-plan to a
+                              staging distance, then servo to a standoff)
+
+The demo expects the ``table`` scene (ADAConfig.scene = "table"), which the
+loader sets automatically when ``--demo feeding`` is passed on the CLI.
+"""
+
+from __future__ import annotations
+
+scene = {
+    "name": "table",
+    # Start at "above_plate" — the wrist camera looks down at the plate
+    # from here, which is the natural starting view for a feeding session.
+    # (The default "stow" keyframe parks the fork inside the plate, so we
+    # need a different starting pose anyway.)
+    "initial_pose": "above_plate",
+}
+
+
+def food_items():
+    """Return a list of :class:`FoodItem` for every ``food/*`` body in the scene.
+
+    Reads positions from the live MuJoCo state, so the list always reflects
+    the current state of the plate.
+    """
+    import mujoco
+
+    from ada_mj.feeding.domain import FoodItem
+
+    items = []
+    for bid in range(robot.model.nbody):
+        name = mujoco.mj_id2name(robot.model, mujoco.mjtObj.mjOBJ_BODY, bid) or ""
+        if not name.startswith("food/"):
+            continue
+        pos = robot.data.xpos[bid].copy()
+        # name format: "food/<label>_<idx>" — strip trailing _idx for food_type
+        label = name.split("/", 1)[1]
+        food_type = label.rsplit("_", 1)[0] if "_" in label else label
+        items.append(FoodItem(name=name, position=pos, food_type=food_type))
+    return items
+
+
+def feed(food=None, schema=None):
+    """Run one ``feed_bite`` cycle.
+
+    Args:
+        food: A :class:`FoodItem`. Defaults to the first item from
+            :func:`food_items`.
+        schema: Acquisition schema. Defaults to ``straight_skewer()``.
+    """
+    from ada_mj.feeding.task import feed_bite
+
+    if food is None:
+        items = food_items()
+        if not items:
+            print("No food items found.")
+            return None
+        food = items[0]
+    return feed_bite(food, schema, robot=robot, ctx=robot._active_context)
+
+
+def feed_all():
+    """Run ``feed_bite`` for each food item in order."""
+    from ada_mj.feeding.task import feeding_demo
+
+    return feeding_demo(food_items(), robot=robot, ctx=robot._active_context)
+
+
+def move_above_food(food=None):
+    """Just the pre-acquisition phase: tilt the fork, then TSR-plan above food.
+
+    Useful for visualizing what ``move_above`` does without running the whole
+    bite cycle.
+    """
+    from ada_mj.feeding.behaviors import move_above, tilt_fork
+    from ada_mj.feeding.domain import straight_skewer
+
+    if food is None:
+        items = food_items()
+        if not items:
+            print("No food items found.")
+            return None
+        food = items[0]
+    schema = straight_skewer()
+    res = tilt_fork(schema.tilt_angle, ctx=robot._active_context)
+    if not res:
+        return res
+    return move_above(
+        food, schema, arm=robot.arm, ctx=robot._active_context, fork_tsr=robot.fork_tsr,
+    )
+
+
+def transfer(plan: float = 0.15, servo: float = 0.10):
+    """Just the mouth-transfer phase: TSR-plan to ``plan`` m, servo to ``servo`` m.
+
+    Useful for visualizing what ``transfer_to_mouth`` does without running
+    the whole bite cycle. Defaults are conservative (15 cm staging,
+    10 cm servo standoff) to stay clear of the head collision envelope.
+    """
+    from ada_mj.feeding.behaviors import transfer_to_mouth
+
+    mouth_pose = robot.head.get_mouth_pose()
+    return transfer_to_mouth(
+        mouth_pose, arm=robot.arm, ctx=robot._active_context, fork_tsr=robot.fork_tsr,
+        plan_approach_distance=plan, servo_approach_distance=servo,
+    )
