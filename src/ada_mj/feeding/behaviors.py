@@ -242,24 +242,69 @@ def transfer_to_mouth(
     *,
     arm: Arm,
     ctx: ExecutionContext,
+    fork_tsr,
+    plan_approach_distance: float = 0.05,
+    servo_approach_distance: float = 0.02,
 ) -> Outcome:
-    """Move the loaded fork to the user's mouth.
+    """Move the loaded fork to the user's mouth in two phases.
 
-    Servos from the current pose (staging) toward the mouth position,
-    maintaining the current fork orientation. The speed profile
-    decelerates from 0.15 m/s to 0.06 m/s near the mouth.
-    F/T threshold is 1N — sensitive to detect lip/face contact.
+    Phase 1 (long-range, collision-aware): plan an arm path to a fork-tip
+    approach TSR — fork tip ``plan_approach_distance`` in front of the
+    mouth along its +x axis, pointing toward the mouth, with small
+    lateral and orientation freedom for the planner to find a feasible
+    config. Uses ``arm.plan_to_tsrs`` so the planner samples within the
+    TSR and picks any collision-free configuration.
 
-    The fork orientation is set by the staging pose (which the planner
-    achieved). The servo preserves it — we translate to the mouth,
-    we don't rotate to match the mouth frame.
+    Phase 2 (close-range, force-aware): from the planned pose, servo the
+    last few cm to ``servo_approach_distance`` from the mouth using
+    ``servo_to_pose`` with the mouth approach speed profile and a tight
+    F/T threshold (1 N) so lip / face contact aborts safely.
+
+    The articutool joints are frozen at planning time (snapshotted into
+    the TSR's ``Tw_e``); only arm joints move during phase 1, and the
+    servo in phase 2 preserves the EE orientation.
+
+    Args:
+        mouth_pose: 4×4 world-frame pose of the mouth (+x out of face).
+        arm: The arm to plan / servo with.
+        ctx: Execution context (sim or hardware).
+        fork_tsr: Fork TSR generator (``robot.fork_tsr``).
+        plan_approach_distance: How far in front of the mouth the planner
+            should target the fork tip (meters). Default 5 cm.
+        servo_approach_distance: Final standoff distance after the servo
+            (meters). Default 2 cm.
     """
-    # Target: mouth position, current fork orientation.
-    # The mouth frame orientation is the face's forward direction —
-    # not related to how the fork should be oriented.
-    approach_distance = 0.02  # stop 2cm from mouth
-    target = arm.get_ee_pose().copy()  # keep current orientation
-    target[:3, 3] = mouth_pose[:3, 3] + mouth_pose[:3, 0] * approach_distance
+    # Phase 1: plan into the approach TSR
+    templates = fork_tsr.approach_mouth(
+        approach_distance=plan_approach_distance, k=3,
+    )
+    goal_tsrs = [t.instantiate(mouth_pose) for t in templates]
+
+    path = arm.plan_to_tsrs(goal_tsrs)
+    if path is None:
+        return failure(
+            FailureKind.PLANNING_FAILED,
+            "transfer_to_mouth:no_path",
+            mouth_pos=mouth_pose[:3, 3].tolist(),
+        )
+    traj = arm.retime(path)
+    if not ctx.execute(traj):
+        return failure(
+            FailureKind.EXECUTION_FAILED,
+            "transfer_to_mouth:plan_execute_failed",
+        )
+
+    # Phase 2: servo the last few cm with F/T monitoring.
+    # The TSR plan landed the fork tip ~plan_approach_distance from the
+    # mouth. We want the fork tip at servo_approach_distance from the
+    # mouth, preserving the EE orientation that the plan achieved. Since
+    # the articutool joints are frozen during the servo, translating the
+    # EE by the desired fork-tip delta translates the fork tip by the
+    # same amount.
+    tip_now = fork_tsr.tip_world_pos()
+    tip_target = mouth_pose[:3, 3] + mouth_pose[:3, 0] * servo_approach_distance
+    target = arm.get_ee_pose().copy()
+    target[:3, 3] = target[:3, 3] + (tip_target - tip_now)
 
     return servo_to_pose(
         target,
@@ -268,7 +313,7 @@ def transfer_to_mouth(
         speed_profile=MOUTH_APPROACH_SPEED,
         ft_threshold=MOUTH_FT_THRESHOLD,
         position_tol=MOUTH_POSITION_TOL,
-        timeout=15.0,
+        timeout=10.0,
     )
 
 
