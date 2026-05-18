@@ -10,6 +10,7 @@ ADA-specific panels and namespace entries.
 from __future__ import annotations
 
 import logging
+from types import ModuleType
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
@@ -24,6 +25,7 @@ def start_console(
     physics: bool = False,
     viewer: bool = False,
     viser: bool = False,
+    demo_module: ModuleType | None = None,
 ) -> None:
     """Launch the ADA IPython console.
 
@@ -32,6 +34,9 @@ def start_console(
         physics: Enable physics simulation.
         viewer: Launch native MuJoCo viewer (requires mjpython).
         viser: Launch browser viewer at http://localhost:8080.
+        demo_module: Loaded demo module — its public functions are added
+            to the IPython namespace and ``robot`` is injected as a
+            module-level global on the demo for use by those functions.
     """
     from mj_manipulator.console import start_console as _start_console
 
@@ -90,6 +95,14 @@ IPython:
         "commands": commands,
         "go_to": lambda pose_name: robot.go_to(pose_name),
     }
+
+    # Wire in demo functions if a demo was loaded — same pattern as geodude.
+    if demo_module is not None:
+        from ada_mj.demo_loader import get_demo_functions, inject_robot
+
+        inject_robot(demo_module, robot)
+        for fn_name, fn in get_demo_functions(demo_module).items():
+            extra_ns[fn_name] = fn
 
     # -- Panel setup callback (same pattern as geodude) -------------------------
     def _setup_ada_panels(gui, viewer, robot, event_loop, tabs):
