@@ -6,8 +6,10 @@
 The j2n6s200 is a 6-DOF arm with a **non-spherical** wrist (the "n"
 in the model name). Joints 4-6 have 37-73 mm offsets between their
 axes, which means EAIK has no analytical decomposition. The factory
-uses ``resolve_ik_solver(with_ik="auto")`` which falls back to mink
-numerical IK automatically.
+passes ssik's ``jaco2_ik`` prebuilt to ``resolve_ik_solver`` so the
+``"auto"`` chain skips EAIK (which refuses) and lands on ssik
+(analytical, every branch). mink remains the final fallback if
+ssik fails to construct for any reason.
 
 All joint specs from ``ada_ros2/ada_description/urdf/j2n6s200.xacro``.
 Named configurations from ``ada_feeding/config/ada_feeding_action_servers_default.yaml``.
@@ -21,7 +23,6 @@ import numpy as np
 
 if TYPE_CHECKING:
     from mj_environment import Environment
-
     from mj_manipulator.arm import Arm
 
 # ---------------------------------------------------------------------------
@@ -95,12 +96,23 @@ def create_jaco2_arm(
     extra_arm_body_names: list[str] | None = None,
     grasp_manager=None,
 ) -> "Arm":
-    """Create a JACO2 arm with mink IK (EAIK has no decomposition for this arm).
+    """Create a JACO2 arm with analytical IK via ssik.
+
+    EAIK refuses the JACO2's non-Pieper 6R geometry, so the factory's
+    ``"auto"`` chain skips EAIK and uses ssik's ``jaco2_ik`` prebuilt.
+    ssik returns every analytical branch (typically 2-8 per pose) with
+    sub-micron FK closure — a substantial upgrade over mink's seeded
+    single-solution numerical IK, particularly for ``arm.plan_to_tsrs``
+    where the planner samples many EE goals from a TSR.
 
     Args:
         env: MuJoCo environment containing the ADA model.
-        ee_site: Name of the end-effector site.
-        with_ik: IK solver mode (default "auto" → mink fallback).
+        ee_site: Name of the end-effector site on the arm chain (not on
+            the welded tool — ssik solves for the arm only).
+        with_ik: IK solver mode. ``"auto"`` (default) tries EAIK first
+            (it'll refuse for JACO2), then ssik, then mink. ``"ssik"``
+            forces ssik directly. ``"mink"`` falls back to the previous
+            numerical solver.
         extra_arm_body_names: Bodies to treat as part of the arm for
             collision checking (e.g., welded tool root body).
 
@@ -110,6 +122,11 @@ def create_jaco2_arm(
     from mj_manipulator.arm import Arm
     from mj_manipulator.arms._ik_factory import resolve_ik_solver
     from mj_manipulator.config import ArmConfig, KinematicLimits, PlanningDefaults
+
+    # ssik's jaco2_ik prebuilt — covers the nominal manufacturer geometry,
+    # which matches ada_assets' JACO2 model. The welded articutool sits
+    # past the EE site so it doesn't enter the arm IK chain.
+    from ssik.prebuilt import jaco2_ik
 
     config = ArmConfig(
         name="jaco2",
@@ -122,10 +139,10 @@ def create_jaco2_arm(
         ee_site=ee_site,
         extra_arm_body_names=extra_arm_body_names,
         planning_defaults=PlanningDefaults(smoothing_iterations=25),
-        max_cartesian_speed=0.06,   # near humans, conservative
+        max_cartesian_speed=0.06,  # near humans, conservative
         max_cartesian_angular=0.3,
     )
 
     arm = Arm(env, config)
-    ik_solver = resolve_ik_solver(arm, with_ik=with_ik)
+    ik_solver = resolve_ik_solver(arm, with_ik=with_ik, ssik_module=jaco2_ik)
     return Arm(env, config, ik_solver=ik_solver, grasp_manager=grasp_manager)
