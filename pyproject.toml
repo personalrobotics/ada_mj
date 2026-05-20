@@ -11,10 +11,11 @@ license = "MIT"
 authors = [
     {name = "Siddhartha Srinivasa", email = "siddhartha.srinivasa@gmail.com"},
 ]
-requires-python = ">=3.10"
+requires-python = ">=3.11"  # ssik (transitive via JACO 2 IK) requires 3.11+
 dependencies = [
     "numpy",
     "mujoco",
+    "ssik>=1.1.0",
     "ada-assets @ git+https://github.com/personalrobotics/ada_assets.git",
     "mj-manipulator @ git+https://github.com/personalrobotics/mj_manipulator.git",
     "mj-environment @ git+https://github.com/personalrobotics/mj_environment.git",
