@@ -16,6 +16,7 @@ dependencies = [
     "numpy",
     "mujoco",
     "ssik>=1.1.0",
+    "ipython>=8.0",
     "ada-assets @ git+https://github.com/personalrobotics/ada_assets.git",
     "mj-manipulator @ git+https://github.com/personalrobotics/mj_manipulator.git",
     "mj-environment @ git+https://github.com/personalrobotics/mj_environment.git",
@@ -37,9 +38,6 @@ tsr = { workspace = true }
 dev = [
     "pytest",
     "ruff",
-]
-console = [
-    "ipython>=8.0",
 ]
 
 [tool.hatch.metadata]
