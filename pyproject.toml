@@ -16,17 +16,21 @@ dependencies = [
     "numpy",
     "mujoco",
     "ssik>=1.1.0",
+    "ipython>=8.0",
     "ada-assets @ git+https://github.com/personalrobotics/ada_assets.git",
     "mj-manipulator @ git+https://github.com/personalrobotics/mj_manipulator.git",
     "mj-environment @ git+https://github.com/personalrobotics/mj_environment.git",
+    "mj-viser @ git+https://github.com/personalrobotics/mj_viser.git",
     "prl-assets @ git+https://github.com/personalrobotics/prl_assets.git",
     "tsr @ git+https://github.com/personalrobotics/tsr.git",
+    "viser>=1.0",
 ]
 
 [tool.uv.sources]
 ada-assets = { workspace = true }
 mj-manipulator = { workspace = true }
 mj-environment = { workspace = true }
+mj-viser = { workspace = true }
 prl-assets = { workspace = true }
 tsr = { workspace = true }
 
@@ -34,9 +38,6 @@ tsr = { workspace = true }
 dev = [
     "pytest",
     "ruff",
-]
-console = [
-    "ipython>=8.0",
 ]
 
 [tool.hatch.metadata]
