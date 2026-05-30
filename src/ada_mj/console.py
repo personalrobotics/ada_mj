@@ -10,6 +10,7 @@ ADA-specific panels and namespace entries.
 from __future__ import annotations
 
 import logging
+import re
 from types import ModuleType
 from typing import TYPE_CHECKING
 
@@ -96,6 +97,11 @@ IPython:
         "go_to": lambda pose_name: robot.go_to(pose_name),
     }
 
+    # Banner lines advertising ADA commands. ADA has no gripper (welded tool),
+    # so the generic pickup/place/go_home primitives don't apply — we opt out
+    # of them below and advertise the demo helpers + go_to/commands instead.
+    banner_lines: list[str] = []
+
     # Wire in demo functions if a demo was loaded — same pattern as geodude.
     if demo_module is not None:
         from ada_mj.demo_loader import get_demo_functions, inject_robot
@@ -103,6 +109,17 @@ IPython:
         inject_robot(demo_module, robot)
         for fn_name, fn in get_demo_functions(demo_module).items():
             extra_ns[fn_name] = fn
+            doc = (fn.__doc__ or "").strip().split("\n", 1)[0].strip()
+            # Strip RST markup so docstrings read cleanly in the terminal:
+            # ":class:`FoodItem`" → "FoodItem", "``feed_bite``" → "feed_bite".
+            doc = re.sub(r":\w+:`([^`]*)`", r"\1", doc).replace("`", "")
+            if len(doc) > 46:
+                doc = doc[:45].rstrip() + "…"
+            banner_lines.append(f"  {fn_name + '()':<18}— {doc}")
+
+    banner_lines.append("  go_to('stow')     — move to a named pose")
+    banner_lines.append(f"  {'commands()':<18}— full ADA command reference")
+    extra_banner = "\n".join(banner_lines) + "\n"
 
     # -- Panel setup callback (same pattern as geodude) -------------------------
     def _setup_ada_panels(gui, viewer, robot, event_loop, tabs):
@@ -243,4 +260,6 @@ IPython:
         robot_name="ADA",
         extra_ns=extra_ns,
         panel_setup=_setup_ada_panels if viser else None,
+        grasp_primitives=False,
+        extra_banner=extra_banner,
     )
