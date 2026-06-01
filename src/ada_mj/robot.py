@@ -131,6 +131,12 @@ class ADA:
         # Fork TSR generator — constructed lazily on first use via .fork_tsr
         self._fork_tsr = None
 
+        # Camera TSR generator (lazy) + cached observe_plate config. The
+        # config is solved once per session by feeding.behaviors.observe_plate
+        # and reused as a fast, repeatable return target between bites.
+        self._camera_tsr = None
+        self._observe_config: np.ndarray | None = None
+
         # Wrist camera (if camera present)
         self._camera = None
         if self.config.with_camera:
@@ -263,6 +269,27 @@ class ADA:
                 tip_site_name=f"{self.config.tool}/fork_tip",
             )
         return self._fork_tsr
+
+    @property
+    def camera_tsr(self):
+        """Camera TSR generator (lazy, cached).
+
+        Builds TSR templates that frame the whole plate in the wrist camera
+        for ``observe_plate``. Requires a wrist camera — raises ``ValueError``
+        otherwise.
+        """
+        if self._camera_tsr is None:
+            if self._camera is None:
+                raise ValueError("camera_tsr requires a wrist camera (with_camera=True)")
+            from ada_mj.feeding.camera_tsr import CameraTSR
+
+            self._camera_tsr = CameraTSR(
+                model=self.model,
+                data=self.data,
+                ee_site_name=self.config.ee_site,
+                camera_name=self.config.camera.color_camera,
+            )
+        return self._camera_tsr
 
     @property
     def named_poses(self) -> dict[str, np.ndarray]:
