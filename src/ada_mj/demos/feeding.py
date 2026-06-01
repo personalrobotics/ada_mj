@@ -7,6 +7,9 @@ Helpers available in the console after launching with ``--demo feeding``:
 
   food_items()              — list of FoodItem instances for the food bodies
                               currently in the scene
+  observe(tilt_max=0)       — move to the observe_plate staging config: the
+                              camera framing the whole plate. Solves a CameraTSR
+                              once and caches the config; returns to it after.
   feed(food=None)           — run one feed_bite cycle for ``food`` (defaults
                               to the first food on the plate)
   feed_all()                — run feed_bite for each food item in order
@@ -53,6 +56,39 @@ def food_items():
         food_type = label.rsplit("_", 1)[0] if "_" in label else label
         items.append(FoodItem(name=name, position=pos, food_type=food_type))
     return items
+
+
+def observe(tilt_max=0.0, force_replan=False):
+    """Move to the ``observe_plate`` staging config — camera framing the plate.
+
+    Solves a CameraTSR over the plate (camera looking down at the plate center,
+    far enough that the whole plate fits the view), executes the plan, and
+    caches the achieved config for fast repeatable returns. After this,
+    ``robot.camera.render_color()`` shows the entire plate.
+
+    Args:
+        tilt_max: Half-angle (degrees) of the look-at cone off vertical. 0 →
+            straight-down-overhead. Widen if the overhead pose is unreachable.
+        force_replan: Re-solve the TSR even if a config is already cached.
+    """
+    import numpy as np
+
+    from ada_mj.feeding.behaviors import observe_plate
+    from ada_mj.scenes.table import PLATE_RADIUS, plate_pose
+
+    pose = plate_pose(robot.model, robot.data)
+    if pose is None:
+        print("No plate_center site — is the table scene loaded?")
+        return None
+
+    return observe_plate(
+        robot,
+        robot._active_context,
+        plate_pose=pose,
+        plate_radius=PLATE_RADIUS,
+        tilt_max=np.radians(tilt_max),
+        force_replan=force_replan,
+    )
 
 
 def feed(food=None, schema=None):

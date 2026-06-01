@@ -121,6 +121,80 @@ def move_above(
     )
 
 
+def observe_plate(
+    robot,
+    ctx: ExecutionContext,
+    *,
+    plate_pose: np.ndarray | None = None,
+    plate_radius: float | None = None,
+    tilt_max: float = 0.0,
+    force_replan: bool = False,
+) -> Outcome:
+    """Move to the ``observe_plate`` staging config — camera framing the plate.
+
+    The feeding loop returns here after each bite. The config is chosen so the
+    whole plate falls inside the wrist camera's view frustum, via a
+    ``CameraTSR`` (camera looking straight down at the plate center, far enough
+    that the plate fits the vertical FOV).
+
+    Solved once per session and cached on the robot: the first call plans into
+    the TSR region and records the achieved config; subsequent calls plan back
+    to that cached config. Returning to a fixed config gives a repeatable
+    camera view (consistent perception) and a fast, reliable replan.
+
+    Args:
+        robot: ADA robot (provides ``camera_tsr``, ``arm``, the cached config).
+        ctx: Execution context.
+        plate_pose: 4x4 world pose of the plate center (z-up). Required when
+            solving (no cached config yet, or ``force_replan``); ignored on the
+            cached-return fast path.
+        plate_radius: Plate radius (m). Required when solving.
+        tilt_max: Half-angle (rad) of the look-at cone off vertical. 0 →
+            straight-down-overhead (best view); widen as a reachability escape
+            hatch if the overhead pose is unreachable for the arm.
+        force_replan: Re-solve the TSR even if a config is cached (e.g. after
+            the plate is re-localized on hardware).
+    """
+    arm = robot.arm
+
+    if ctx is None:
+        return failure(
+            FailureKind.PRECONDITION_FAILED,
+            "observe_plate:no_context",
+        )
+
+    # Fast path: replan back to the cached observe config.
+    if not force_replan and robot._observe_config is not None:
+        path = arm.plan_to_configuration(robot._observe_config)
+        if path is None:
+            return failure(FailureKind.PLANNING_FAILED, "observe_plate:return_no_path")
+        if ctx.execute(arm.retime(path)):
+            return success()
+        return failure(FailureKind.EXECUTION_FAILED, "observe_plate:return_execution_failed")
+
+    if plate_pose is None or plate_radius is None:
+        return failure(
+            FailureKind.PRECONDITION_FAILED,
+            "observe_plate:need_plate_geometry",
+        )
+
+    templates = robot.camera_tsr.observe(plate_radius=plate_radius, tilt_max=tilt_max)
+    goal_tsrs = [t.instantiate(plate_pose) for t in templates]
+
+    path = arm.plan_to_tsrs(goal_tsrs)
+    if path is None:
+        return failure(FailureKind.PLANNING_FAILED, "observe_plate:no_path")
+
+    if not ctx.execute(arm.retime(path)):
+        return failure(FailureKind.EXECUTION_FAILED, "observe_plate:execution_failed")
+
+    # Cache the achieved config so subsequent calls return to the exact same
+    # camera view. Kept off robot.named_poses, which is a fixed enum of static
+    # poses (go_to / demo_loader validate against it) — this config is dynamic.
+    robot._observe_config = arm.get_joint_positions().copy()
+    return success()
+
+
 def tilt_fork(angle: float, *, ctx: ExecutionContext) -> Outcome:
     """Set the articutool tilt angle.
 
