@@ -40,6 +40,28 @@ TABLE_SURFACE_HEIGHT = 0.735  # from prl_assets/ada_table/meta.yaml
 PLATE_RADIUS = 0.133
 PLATE_HEIGHT = 0.027
 
+# Name of the plate-center site (top surface, z-up) added in _add_table_and_plate.
+PLATE_CENTER_SITE = "plate_center"
+
+
+def plate_pose(model, data) -> np.ndarray | None:
+    """World pose (4x4) of the plate-center site, or ``None`` if absent.
+
+    Returns the full site frame — orientation included, not just translation —
+    so callers honor a tilted plate's actual disc normal (the framing standoff
+    is sized relative to that normal). Runs forward kinematics so the read
+    reflects the current state. Shared by the feeding loop, the ``observe``
+    demo helper, and ``scripts/validate_observe.py``.
+    """
+    sid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_SITE, PLATE_CENTER_SITE)
+    if sid < 0:
+        return None
+    mujoco.mj_forward(model, data)
+    T = np.eye(4)
+    T[:3, :3] = data.site_xmat[sid].reshape(3, 3)
+    T[:3, 3] = data.site_xpos[sid]
+    return T
+
 # Usable half-extents of the table surface for placement sampling.
 # The table mesh is 1.85 × 0.74 m but the C-shape leaves a smaller usable
 # rectangle near the user. Conservative half-extents keep the plate centered.

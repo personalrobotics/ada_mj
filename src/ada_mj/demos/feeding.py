@@ -71,24 +71,20 @@ def observe(tilt_max=0.0, force_replan=False):
             straight-down-overhead. Widen if the overhead pose is unreachable.
         force_replan: Re-solve the TSR even if a config is already cached.
     """
-    import mujoco
     import numpy as np
 
     from ada_mj.feeding.behaviors import observe_plate
-    from ada_mj.scenes.table import PLATE_RADIUS
+    from ada_mj.scenes.table import PLATE_RADIUS, plate_pose
 
-    sid = mujoco.mj_name2id(robot.model, mujoco.mjtObj.mjOBJ_SITE, "plate_center")
-    if sid < 0:
+    pose = plate_pose(robot.model, robot.data)
+    if pose is None:
         print("No plate_center site — is the table scene loaded?")
         return None
-    mujoco.mj_forward(robot.model, robot.data)
-    plate_pose = np.eye(4)
-    plate_pose[:3, 3] = robot.data.site_xpos[sid].copy()
 
     return observe_plate(
         robot,
         robot._active_context,
-        plate_pose=plate_pose,
+        plate_pose=pose,
         plate_radius=PLATE_RADIUS,
         tilt_max=np.radians(tilt_max),
         force_replan=force_replan,

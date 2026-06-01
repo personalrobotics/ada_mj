@@ -157,6 +157,12 @@ def observe_plate(
     """
     arm = robot.arm
 
+    if ctx is None:
+        return failure(
+            FailureKind.PRECONDITION_FAILED,
+            "observe_plate:no_context",
+        )
+
     # Fast path: replan back to the cached observe config.
     if not force_replan and robot._observe_config is not None:
         path = arm.plan_to_configuration(robot._observe_config)
@@ -182,11 +188,10 @@ def observe_plate(
     if not ctx.execute(arm.retime(path)):
         return failure(FailureKind.EXECUTION_FAILED, "observe_plate:execution_failed")
 
-    # Cache the achieved config and register it as a named pose so the loop
-    # (and robot.go_to) can return to the exact same camera view.
-    q_observe = arm.get_joint_positions().copy()
-    robot._observe_config = q_observe
-    robot.named_poses["observe_plate"] = q_observe
+    # Cache the achieved config so subsequent calls return to the exact same
+    # camera view. Kept off robot.named_poses, which is a fixed enum of static
+    # poses (go_to / demo_loader validate against it) — this config is dynamic.
+    robot._observe_config = arm.get_joint_positions().copy()
     return success()
 
 

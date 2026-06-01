@@ -57,12 +57,12 @@ if TYPE_CHECKING:
     import mujoco
 
 
-def min_standoff_for_disc(disc_radius: float, fovy: float, *, tilt: float = 0.0) -> float:
+def min_standoff_for_disc(disc_radius: float, half_fov: float, *, tilt: float = 0.0) -> float:
     """Minimum standoff for a disc to fit a camera's FOV cone (closed form).
 
     A disc of radius ``disc_radius`` is viewed with the optical axis through its
     center, tilted ``tilt`` off the disc normal. Every rim point stays inside
-    the FOV cone of half-angle ``β = fovy/2`` when::
+    the FOV cone of half-angle ``β = half_fov`` when::
 
         d_min(θ) = disc_radius·(sinθ + cosθ/tanβ)   for θ ≤ β   (near rim governs)
                  = disc_radius/sinβ                  for θ > β   (rim tangent governs)
@@ -73,26 +73,25 @@ def min_standoff_for_disc(disc_radius: float, fovy: float, *, tilt: float = 0.0)
 
     Args:
         disc_radius: Disc radius (m).
-        fovy: Full vertical field of view (rad); ``β = fovy/2`` is the limiting
-            half-angle (the FOV's inscribed circle).
+        half_fov: Limiting half field-of-view (rad) — the FOV's inscribed
+            circle (``min(fovy, fovx)/2``), the only roll-invariant bound.
         tilt: Optical-axis tilt off the disc normal (rad).
 
     Returns:
         Minimum standoff distance (m).
     """
-    beta = fovy / 2.0
-    if tilt <= beta:
-        return disc_radius * (np.sin(tilt) + np.cos(tilt) / np.tan(beta))
-    return disc_radius / np.sin(beta)
+    if half_fov <= 0.0:
+        raise ValueError(f"half_fov must be positive, got {half_fov}")
+    if tilt <= half_fov:
+        return disc_radius * (np.sin(tilt) + np.cos(tilt) / np.tan(half_fov))
+    return disc_radius / np.sin(half_fov)
 
 
 class CameraTSR:
     """Generate TSR templates that frame the plate in the wrist camera.
 
-    Reads the EE-to-camera transform live from the MuJoCo model. Unlike the
-    fork tip, the camera is rigid relative to the EE, so this transform is
-    constant — but reading it live keeps the generator robust to model
-    changes (e.g. a recalibrated camera mount).
+    The camera is rigid relative to the EE (shares ``link_6``), so the
+    EE-to-camera transform is constant; it is computed once (lazily) and cached.
 
     Args:
         model: MuJoCo model.
@@ -114,6 +113,7 @@ class CameraTSR:
         self._data = data
         self._ee_site_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_SITE, ee_site_name)
         self._cam_id = mj.mj_name2id(model, mj.mjtObj.mjOBJ_CAMERA, camera_name)
+        self._T_ee_cam: np.ndarray | None = None  # constant; memoized on first use
 
         if self._ee_site_id < 0:
             raise ValueError(f"EE site '{ee_site_name}' not found")
@@ -123,7 +123,28 @@ class CameraTSR:
     @property
     def fovy(self) -> float:
         """Camera vertical field of view (radians)."""
-        return float(np.radians(self._model.cam_fovy[self._cam_id]))
+        fovy = float(np.radians(self._model.cam_fovy[self._cam_id]))
+        if fovy <= 0.0:
+            raise ValueError(f"camera fovy must be positive, got {np.degrees(fovy)}°")
+        return fovy
+
+    @property
+    def half_fov(self) -> float:
+        """Limiting half field-of-view (radians) — the FOV's inscribed circle.
+
+        With image-roll free, the only roll-invariant containment bound is the
+        circle inscribed in the FOV rectangle, i.e. ``min(fovy, fovx)/2``. The
+        horizontal FOV is derived from the sensor aspect:
+        ``tan(fovx/2) = (w/h)·tan(fovy/2)``. For a landscape sensor (w ≥ h, like
+        the D415's 1280×720) this is simply ``fovy/2``; computing it from the
+        actual resolution keeps the guarantee correct for any sensor.
+        """
+        half_v = self.fovy / 2.0
+        w, h = self._model.cam_resolution[self._cam_id]
+        if w <= 0 or h <= 0:
+            return half_v  # resolution unset → assume landscape (fovy limits)
+        half_h = float(np.arctan((w / h) * np.tan(half_v)))
+        return min(half_v, half_h)
 
     def min_standoff(
         self,
@@ -134,16 +155,10 @@ class CameraTSR:
     ) -> float:
         """Minimum camera standoff (m) for the whole plate to fit the frustum.
 
-        Closed form (see module docstring for the derivation). The plate is a
-        disc of radius ``R_eff = plate_radius·(1+frame_margin)``; with the
-        optical axis through the plate center, every rim point stays inside the
-        FOV cone of half-angle ``β = fovy/2`` when::
-
-            d_min(θ) = R_eff·(sinθ + cosθ/tanβ)   for θ ≤ β
-                     = R_eff/sinβ                  for θ > β
-
-        For ``θ > β`` the binding ray is tangent to the rim and the standoff
-        saturates at ``R_eff/sinβ`` — tilting further needs no extra distance.
+        Thin adapter over :func:`min_standoff_for_disc`: applies the framing
+        margin (``R_eff = plate_radius·(1+frame_margin)``) and supplies the
+        camera's limiting half-FOV (:attr:`half_fov`). See that function and the
+        module docstring for the closed form and its derivation.
 
         Args:
             plate_radius: Plate radius (m).
@@ -156,7 +171,7 @@ class CameraTSR:
             Minimum standoff distance ``d`` (m).
         """
         r_eff = plate_radius * (1.0 + frame_margin)
-        return min_standoff_for_disc(r_eff, self.fovy, tilt=tilt)
+        return min_standoff_for_disc(r_eff, self.half_fov, tilt=tilt)
 
     def _site_pose(self, site_id: int) -> np.ndarray:
         """Read a 4x4 pose from a MuJoCo site."""
@@ -173,18 +188,21 @@ class CameraTSR:
         return T
 
     def _get_T_ee_to_cam(self) -> np.ndarray:
-        """Compute the (constant) EE-to-camera transform from the model.
+        """The (constant) EE-to-camera transform, computed once and cached.
 
-        Runs forward kinematics so site and camera poses are consistent,
-        then returns ``inv(T_world_ee) @ T_world_cam``. The result is
-        independent of arm configuration (camera and EE share ``link_6``).
+        Camera and EE share ``link_6`` with no joint between them, so this
+        transform is configuration-independent. It is computed on first use —
+        running forward kinematics so site and camera poses are consistent — and
+        memoized, so repeat calls neither recompute nor mutate ``data``.
         """
-        import mujoco as mj
+        if self._T_ee_cam is None:
+            import mujoco as mj
 
-        mj.mj_forward(self._model, self._data)
-        T_world_ee = self._site_pose(self._ee_site_id)
-        T_world_cam = self._camera_pose()
-        return np.linalg.inv(T_world_ee) @ T_world_cam
+            mj.mj_forward(self._model, self._data)
+            T_world_ee = self._site_pose(self._ee_site_id)
+            T_world_cam = self._camera_pose()
+            self._T_ee_cam = np.linalg.inv(T_world_ee) @ T_world_cam
+        return self._T_ee_cam
 
     def observe(
         self,

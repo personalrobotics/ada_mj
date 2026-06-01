@@ -429,6 +429,10 @@ class ADA:
         Deactivates teleop, aborts running trajectories, resets MuJoCo
         state, and syncs the controller to the new positions.
         """
+        # The cached observe_plate config is tied to the pre-reset state
+        # (arm + plate); invalidate it so the next observe_plate re-solves.
+        self._observe_config = None
+
         ctx = self._active_context
         if ctx is not None:
             ctx.reset_to_keyframe("stow")
