@@ -17,13 +17,11 @@ items are freejoint so the fork can stab and lift them.
 
 from __future__ import annotations
 
-import numpy as np
 import mujoco
-
+import numpy as np
 from ada_assets.assembly import build_spec, compile_and_init
 from prl_assets import OBJECTS_DIR
 from tsr.placement.stable_placer import StablePlacer
-
 
 # Table position in the wheelchair/world frame. x and y are derived from
 # the ada_feeding planning scene (config: ada_planning_scene.yaml, namespace
@@ -61,6 +59,73 @@ def plate_pose(model, data) -> np.ndarray | None:
     T[:3, :3] = data.site_xmat[sid].reshape(3, 3)
     T[:3, 3] = data.site_xpos[sid]
     return T
+
+
+def detect_food(model, data):
+    """Food items currently *on the plate* (the sim stand-in for perception).
+
+    Reads ``food/*`` bodies from live MuJoCo state and keeps those resting on
+    the plate — within ``1.5·PLATE_RADIUS`` horizontally of the plate center and
+    not below it. Food removed by :func:`hide_food` (teleported far below) is
+    naturally excluded, exactly as a real perception pipeline would stop seeing
+    an eaten bite. On hardware this function is replaced by camera + segmentation.
+
+    Must run on the thread that owns ``data`` (it calls ``mj_forward``).
+
+    Returns:
+        List of :class:`~ada_mj.feeding.domain.FoodItem`.
+    """
+    from ada_mj.feeding.domain import FoodItem
+
+    plate = plate_pose(model, data)  # also runs mj_forward
+    if plate is None:
+        return []
+    center = plate[:3, 3]
+
+    items = []
+    for bid in range(model.nbody):
+        name = mujoco.mj_id2name(model, mujoco.mjtObj.mjOBJ_BODY, bid) or ""
+        if not name.startswith("food/"):
+            continue
+        pos = data.xpos[bid].copy()
+        if np.hypot(pos[0] - center[0], pos[1] - center[1]) > 1.5 * PLATE_RADIUS:
+            continue
+        if pos[2] < center[2] - 0.05:  # below the plate top → hidden/removed
+            continue
+        label = name.split("/", 1)[1]
+        food_type = label.rsplit("_", 1)[0] if "_" in label else label
+        items.append(FoodItem(name=name, position=pos, food_type=food_type))
+    return items
+
+
+def hide_food(model, data, food_name: str) -> bool:
+    """Remove an eaten food body from the scene (sim stand-in for consumption).
+
+    Teleports the food's freejoint far below the floor, zeros its velocity, and
+    disables its contacts so it neither renders on the plate nor interferes with
+    physics. After this, :func:`detect_food` no longer returns it. On hardware
+    this is a no-op — the eaten bite is simply gone from perception.
+
+    Must run on the thread that owns ``data``.
+
+    Returns:
+        True if the body was found and hidden.
+    """
+    jid = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_JOINT, f"{food_name}/freejoint")
+    if jid < 0:
+        return False
+    qadr = model.jnt_qposadr[jid]
+    data.qpos[qadr : qadr + 3] = [0.0, 0.0, -10.0]
+    data.qpos[qadr + 3 : qadr + 7] = [1.0, 0.0, 0.0, 0.0]
+    vadr = model.jnt_dofadr[jid]
+    data.qvel[vadr : vadr + 6] = 0.0
+    bid = model.jnt_bodyid[jid]
+    for g in range(model.body_geomnum[bid]):
+        gid = model.body_geomadr[bid] + g
+        model.geom_contype[gid] = 0
+        model.geom_conaffinity[gid] = 0
+    mujoco.mj_forward(model, data)
+    return True
 
 # Usable half-extents of the table surface for placement sampling.
 # The table mesh is 1.85 × 0.74 m but the C-shape leaves a smaller usable

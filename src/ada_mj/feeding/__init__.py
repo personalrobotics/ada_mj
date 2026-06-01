@@ -21,13 +21,13 @@ from ada_mj.feeding.domain import (
     ForkState,
     straight_skewer,
 )
-from ada_mj.feeding.task import feed_bite, feeding_demo
+from ada_mj.feeding.task import feed_bite, feeding_session
 
 __all__ = [
     "AcquisitionSchema",
     "FoodItem",
     "ForkState",
     "feed_bite",
-    "feeding_demo",
+    "feeding_session",
     "straight_skewer",
 ]
