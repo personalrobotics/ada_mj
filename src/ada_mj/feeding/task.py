@@ -175,10 +175,14 @@ def feeding_session(
         immediately on a safety abort.
     """
     succeeded: list[str] = []
-    failed: set[str] = set()
+    failed: list[str] = []
+    attempted: set[str] = set()  # every item tried — the termination guarantee
 
+    # force_replan: don't trust a config cached from a prior session at a
+    # different plate location; solve fresh for the current plate.
     res = observe_plate(
-        robot, ctx, plate_pose=plate_pose, plate_radius=plate_radius, tilt_max=tilt_max
+        robot, ctx, plate_pose=plate_pose, plate_radius=plate_radius,
+        tilt_max=tilt_max, force_replan=True,
     )
     if not res:
         logger.warning("feeding_session: initial observe_plate failed (%s)", res.failure_code)
@@ -186,12 +190,14 @@ def feeding_session(
 
     attempts = 0
     while max_bites is None or attempts < max_bites:
-        # Detect from the observe pose; skip items we already failed to feed so
-        # the loop can't spin forever on an unreachable bite.
-        candidates = [f for f in detect_food() if f.name not in failed]
+        # Each item is attempted at most once: this — not consumption — is what
+        # guarantees termination. A bite that succeeds but isn't actually removed
+        # (consume_food failed, or it's a no-op on hardware) is still not re-fed.
+        candidates = [f for f in detect_food() if f.name not in attempted]
         if not candidates:
             break
         food = candidates[0]
+        attempted.add(food.name)
         attempts += 1
 
         logger.info("feeding_session: feeding %s", food.name)
@@ -203,7 +209,7 @@ def feeding_session(
                 FailureKind.SAFETY_ABORTED,
                 "feeding_session:safety_abort",
                 succeeded=succeeded,
-                failed=sorted(failed),
+                failed=failed,
                 aborted_on=food.name,
             )
 
@@ -216,17 +222,17 @@ def feeding_session(
                 food.name,
                 result.failure_kind.value if result.failure_kind else "unknown",
             )
-            failed.add(food.name)
+            failed.append(food.name)
 
         # Return to the observe pose to re-frame the plate for the next detect.
+        # A failure here can't undo the bites already delivered, so end the
+        # session gracefully with what was achieved rather than reporting failure.
         ret = observe_plate(robot, ctx)
         if not ret:
-            logger.warning("feeding_session: return to observe failed (%s)", ret.failure_code)
-            return failure(
-                FailureKind.EXECUTION_FAILED,
-                "feeding_session:observe_return_failed",
-                succeeded=succeeded,
-                failed=sorted(failed),
+            logger.warning(
+                "feeding_session: return to observe failed (%s) — ending session",
+                ret.failure_code,
             )
+            break
 
-    return success(succeeded=succeeded, failed=sorted(failed))
+    return success(succeeded=succeeded, failed=failed)

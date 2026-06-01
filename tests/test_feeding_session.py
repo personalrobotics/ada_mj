@@ -127,6 +127,61 @@ def test_session_aborts_if_initial_observe_fails(monkeypatch):
     assert called == []  # never reached detection — bailed on the first observe
 
 
+def test_session_terminates_when_consume_is_noop(monkeypatch):
+    """A successful bite that isn't actually removed must not be re-fed.
+
+    consume_food is a no-op (the hardware case, or a hide that silently fails),
+    so detect keeps returning every item. The attempted-set — not consumption —
+    must still guarantee each item is fed exactly once and the loop terminates.
+    Without that guard this would be an infinite loop.
+    """
+    foods = _foods(3)
+    outcome, remaining, consumed = _run(
+        monkeypatch,
+        feed_bite_result=lambda f: success(food=f.name),
+        foods=foods,
+        consume_removes=False,  # consume does nothing — detect always returns all
+        max_bites=10,  # guard: a regression hits the cap instead of hanging the suite
+    )
+    assert outcome
+    assert sorted(outcome.details["succeeded"]) == [f.name for f in foods]  # each once
+    assert len(outcome.details["succeeded"]) == 3
+    assert remaining == {f.name for f in foods}  # never removed, yet never re-fed
+
+
+def test_session_soft_ends_on_observe_return_failure(monkeypatch):
+    """A return-to-observe failure ends the session gracefully — the bites that
+    were already delivered stand (success), not a hard failure."""
+    foods = _foods(3)
+    remaining = {f.name: f for f in foods}
+    consumed = []
+    calls = {"n": 0}
+
+    def observe(*a, **k):
+        calls["n"] += 1
+        # initial observe succeeds; the return after the first bite fails
+        return success() if calls["n"] == 1 else failure(FailureKind.PLANNING_FAILED, "o:no_path")
+
+    def consume(f):
+        consumed.append(f.name)
+        remaining.pop(f.name, None)
+
+    monkeypatch.setattr(task, "observe_plate", observe)
+    monkeypatch.setattr(task, "feed_bite", lambda food, **k: success(food=food.name))
+
+    outcome = task.feeding_session(
+        robot=object(),
+        ctx=object(),
+        detect_food=lambda: list(remaining.values()),
+        consume_food=consume,
+        plate_pose=np.eye(4),
+        plate_radius=0.1,
+    )
+    assert outcome  # success despite the observe-return failure
+    assert outcome.details["succeeded"] == [foods[0].name]  # one delivered, then ended
+    assert consumed == [foods[0].name]
+
+
 @pytest.mark.slow
 def test_detect_and_hide_food_in_sim():
     """detect_food / hide_food mechanics against the real table scene."""

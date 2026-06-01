@@ -41,6 +41,12 @@ PLATE_HEIGHT = 0.027
 # Name of the plate-center site (top surface, z-up) added in _add_table_and_plate.
 PLATE_CENTER_SITE = "plate_center"
 
+# "On the plate" acceptance volume for detect_food: within this horizontal
+# distance of the plate center, and no more than ON_PLATE_Z_DROP below the plate
+# top. Food removed by hide_food (teleported far below) falls outside it.
+ON_PLATE_XY_MARGIN = 1.5 * PLATE_RADIUS
+ON_PLATE_Z_DROP = 0.05
+
 
 def plate_pose(model, data) -> np.ndarray | None:
     """World pose (4x4) of the plate-center site, or ``None`` if absent.
@@ -88,9 +94,9 @@ def detect_food(model, data):
         if not name.startswith("food/"):
             continue
         pos = data.xpos[bid].copy()
-        if np.hypot(pos[0] - center[0], pos[1] - center[1]) > 1.5 * PLATE_RADIUS:
+        if np.hypot(pos[0] - center[0], pos[1] - center[1]) > ON_PLATE_XY_MARGIN:
             continue
-        if pos[2] < center[2] - 0.05:  # below the plate top → hidden/removed
+        if pos[2] < center[2] - ON_PLATE_Z_DROP:  # below the plate top → removed
             continue
         label = name.split("/", 1)[1]
         food_type = label.rsplit("_", 1)[0] if "_" in label else label
@@ -101,12 +107,14 @@ def detect_food(model, data):
 def hide_food(model, data, food_name: str) -> bool:
     """Remove an eaten food body from the scene (sim stand-in for consumption).
 
-    Teleports the food's freejoint far below the floor, zeros its velocity, and
-    disables its contacts so it neither renders on the plate nor interferes with
-    physics. After this, :func:`detect_food` no longer returns it. On hardware
-    this is a no-op — the eaten bite is simply gone from perception.
+    Teleports the food's freejoint far below the floor and zeros its velocity.
+    That position is below the floor and outside :func:`detect_food`'s on-plate
+    window, so the body no longer renders on the plate nor is re-detected. On
+    hardware this is a no-op — the eaten bite is simply gone from perception.
 
-    Must run on the thread that owns ``data``.
+    Only ``data`` is mutated (not ``model``), so a later ``mj_resetData`` /
+    keyframe reset restores the food cleanly. Must run on the thread that owns
+    ``data``.
 
     Returns:
         True if the body was found and hidden.
@@ -119,11 +127,6 @@ def hide_food(model, data, food_name: str) -> bool:
     data.qpos[qadr + 3 : qadr + 7] = [1.0, 0.0, 0.0, 0.0]
     vadr = model.jnt_dofadr[jid]
     data.qvel[vadr : vadr + 6] = 0.0
-    bid = model.jnt_bodyid[jid]
-    for g in range(model.body_geomnum[bid]):
-        gid = model.body_geomadr[bid] + g
-        model.geom_contype[gid] = 0
-        model.geom_conaffinity[gid] = 0
     mujoco.mj_forward(model, data)
     return True
 
