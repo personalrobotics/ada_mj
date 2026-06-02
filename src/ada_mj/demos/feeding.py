@@ -12,7 +12,8 @@ Helpers available in the console after launching with ``--demo feeding``:
                               once and caches the config; returns to it after.
   feed(food=None)           — run one feed_bite cycle for ``food`` (defaults
                               to the first food on the plate)
-  feed_all()                — run feed_bite for each food item in order
+  feed_all()                — full session: observe → bite → re-observe until
+                              the plate is clear (hides each eaten item)
   move_above_food(food=None)— just the pre-acquisition phase (TSR-plan the
                               fork tip above a food item, schema-tilted)
   transfer(plan=0.15, servo=0.10)
@@ -35,27 +36,27 @@ scene = {
 }
 
 
-def food_items():
-    """Return a list of :class:`FoodItem` for every ``food/*`` body in the scene.
+def _on_data_thread(fn):
+    """Run ``fn`` on the thread that owns MuJoCo ``data``.
 
-    Reads positions from the live MuJoCo state, so the list always reflects
-    the current state of the plate.
+    Reads/writes of live state (detect, hide) must happen on the physics
+    owner thread. ``run_on_physics_thread`` runs ``fn`` directly when already
+    there (the console/tick-driven case) and marshals it otherwise.
     """
-    import mujoco
+    ctx = robot._active_context
+    el = getattr(ctx, "_event_loop", None) if ctx is not None else None
+    return el.run_on_physics_thread(fn) if el is not None else fn()
 
-    from ada_mj.feeding.domain import FoodItem
 
-    items = []
-    for bid in range(robot.model.nbody):
-        name = mujoco.mj_id2name(robot.model, mujoco.mjtObj.mjOBJ_BODY, bid) or ""
-        if not name.startswith("food/"):
-            continue
-        pos = robot.data.xpos[bid].copy()
-        # name format: "food/<label>_<idx>" — strip trailing _idx for food_type
-        label = name.split("/", 1)[1]
-        food_type = label.rsplit("_", 1)[0] if "_" in label else label
-        items.append(FoodItem(name=name, position=pos, food_type=food_type))
-    return items
+def food_items():
+    """Return the :class:`FoodItem` list currently on the plate.
+
+    Reflects live MuJoCo state, so eaten items (hidden by the feeding loop) no
+    longer appear.
+    """
+    from ada_mj.scenes.table import detect_food
+
+    return _on_data_thread(lambda: detect_food(robot.model, robot.data))
 
 
 def observe(tilt_max=0.0, force_replan=False):
@@ -110,11 +111,38 @@ def feed(food=None, schema=None):
     return feed_bite(food, schema, robot=robot, ctx=robot._active_context)
 
 
-def feed_all():
-    """Run ``feed_bite`` for each food item in order."""
-    from ada_mj.feeding.task import feeding_demo
+def feed_all(tilt_max=0.0):
+    """Run the full feeding session: observe → bite → re-observe until clear.
 
-    return feeding_demo(food_items(), robot=robot, ctx=robot._active_context)
+    Returns to the plate-framing observe pose after each bite and re-detects,
+    hiding each eaten item so the loop terminates when the plate is clear.
+
+    Args:
+        tilt_max: Look-at cone half-angle (degrees) for the observe pose.
+    """
+    import numpy as np
+
+    from ada_mj.feeding.task import feeding_session
+    from ada_mj.scenes.table import PLATE_RADIUS, detect_food, hide_food, plate_pose
+
+    pose = _on_data_thread(lambda: plate_pose(robot.model, robot.data))
+    if pose is None:
+        print("No plate_center site — is the table scene loaded?")
+        return None
+
+    return feeding_session(
+        robot,
+        robot._active_context,
+        detect_food=lambda: _on_data_thread(
+            lambda: detect_food(robot.model, robot.data)
+        ),
+        consume_food=lambda food: _on_data_thread(
+            lambda: hide_food(robot.model, robot.data, food.name)
+        ),
+        plate_pose=pose,
+        plate_radius=PLATE_RADIUS,
+        tilt_max=np.radians(tilt_max),
+    )
 
 
 def move_above_food(food=None):

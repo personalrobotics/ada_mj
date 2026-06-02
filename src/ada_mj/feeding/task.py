@@ -23,6 +23,7 @@ from ada_mj.feeding.behaviors import (
     extract_food,
     level_fork,
     move_above,
+    observe_plate,
     retract_from_mouth,
     tare_ft,
     tilt_fork,
@@ -32,6 +33,9 @@ from ada_mj.feeding.behaviors import (
 from ada_mj.feeding.domain import AcquisitionSchema, FoodItem, straight_skewer
 
 if TYPE_CHECKING:
+    from collections.abc import Callable
+
+    import numpy as np
     from mj_manipulator.protocols import ExecutionContext
 
 logger = logging.getLogger(__name__)
@@ -134,39 +138,76 @@ def feed_bite(
     return success(food=food.name)
 
 
-def feeding_demo(
-    food_items: list[FoodItem],
-    *,
+def feeding_session(
     robot,
     ctx: ExecutionContext,
+    *,
+    detect_food: Callable[[], list[FoodItem]],
+    consume_food: Callable[[FoodItem], None],
+    plate_pose: np.ndarray,
+    plate_radius: float,
+    tilt_max: float = 0.0,
+    max_bites: int | None = None,
 ) -> Outcome:
-    """Run a full feeding session — acquire and deliver each food item.
+    """Run a feeding session: observe → detect → bite → consume → re-observe.
 
-    Continues through the list, skipping items that fail (e.g., can't
-    reach, can't plan). Stops immediately on safety abort.
+    Returns to the ``observe_plate`` staging config (camera framing the whole
+    plate) after every bite and re-detects, so the loop adapts to food that
+    moved or was removed rather than trusting a stale list. Terminates when the
+    plate is clear of food the robot can still attempt.
+
+    Perception and consumption are injected so the same loop runs in sim and on
+    hardware: in sim ``detect_food`` reads on-plate bodies and ``consume_food``
+    hides the eaten one; on hardware they become real perception and a no-op.
 
     Args:
-        food_items: List of food items to feed.
         robot: ADA robot instance.
         ctx: Execution context.
+        detect_food: Returns the food currently on the plate (no args).
+        consume_food: Marks one food item as eaten (removes it from detection).
+        plate_pose: 4x4 world pose of the plate center (for the first observe).
+        plate_radius: Plate radius (m).
+        tilt_max: Look-at cone half-angle for ``observe_plate`` (rad).
+        max_bites: Optional safety cap on the number of bite attempts.
 
     Returns:
-        Outcome with details including which items succeeded/failed.
+        Outcome with ``succeeded`` / ``failed`` food-name lists. Stops
+        immediately on a safety abort.
     """
-    succeeded = []
-    failed = []
+    succeeded: list[str] = []
+    failed: list[str] = []
+    attempted: set[str] = set()  # every item tried — the termination guarantee
 
-    for food in food_items:
-        logger.info("Feeding: %s", food.name)
+    # force_replan: don't trust a config cached from a prior session at a
+    # different plate location; solve fresh for the current plate.
+    res = observe_plate(
+        robot, ctx, plate_pose=plate_pose, plate_radius=plate_radius,
+        tilt_max=tilt_max, force_replan=True,
+    )
+    if not res:
+        logger.warning("feeding_session: initial observe_plate failed (%s)", res.failure_code)
+        return res
+
+    attempts = 0
+    while max_bites is None or attempts < max_bites:
+        # Each item is attempted at most once: this — not consumption — is what
+        # guarantees termination. A bite that succeeds but isn't actually removed
+        # (consume_food failed, or it's a no-op on hardware) is still not re-fed.
+        candidates = [f for f in detect_food() if f.name not in attempted]
+        if not candidates:
+            break
+        food = candidates[0]
+        attempted.add(food.name)
+        attempts += 1
+
+        logger.info("feeding_session: feeding %s", food.name)
         result = feed_bite(food, robot=robot, ctx=ctx)
 
         if result.failure_kind == FailureKind.SAFETY_ABORTED:
-            logger.warning("Safety abort during %s — stopping", food.name)
-            robot.go_to("stow")
-            failed.append(food.name)
+            logger.warning("feeding_session: safety abort during %s — stopping", food.name)
             return failure(
                 FailureKind.SAFETY_ABORTED,
-                "feeding_demo:safety_abort",
+                "feeding_session:safety_abort",
                 succeeded=succeeded,
                 failed=failed,
                 aborted_on=food.name,
@@ -174,13 +215,24 @@ def feeding_demo(
 
         if result:
             succeeded.append(food.name)
+            consume_food(food)
         else:
             logger.warning(
-                "Failed to feed %s (%s) — skipping",
+                "feeding_session: failed to feed %s (%s) — skipping",
                 food.name,
                 result.failure_kind.value if result.failure_kind else "unknown",
             )
             failed.append(food.name)
 
-    robot.go_to("stow")
+        # Return to the observe pose to re-frame the plate for the next detect.
+        # A failure here can't undo the bites already delivered, so end the
+        # session gracefully with what was achieved rather than reporting failure.
+        ret = observe_plate(robot, ctx)
+        if not ret:
+            logger.warning(
+                "feeding_session: return to observe failed (%s) — ending session",
+                ret.failure_code,
+            )
+            break
+
     return success(succeeded=succeeded, failed=failed)
