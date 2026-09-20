@@ -22,7 +22,7 @@ dependencies = [
     "mj-environment @ git+https://github.com/personalrobotics/mj_environment.git",
     "mj-viser @ git+https://github.com/personalrobotics/mj_viser.git",
     "prl-assets @ git+https://github.com/personalrobotics/prl_assets.git",
-    "tsr @ git+https://github.com/personalrobotics/tsr.git",
+    "sstsr>=2.0.0",
     "viser>=1.0",
 ]
 
@@ -32,7 +32,6 @@ mj-manipulator = { workspace = true }
 mj-environment = { workspace = true }
 mj-viser = { workspace = true }
 prl-assets = { workspace = true }
-tsr = { workspace = true }
 
 [project.optional-dependencies]
 dev = [
