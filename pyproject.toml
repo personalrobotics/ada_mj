@@ -22,7 +22,7 @@ dependencies = [
     "mj-environment @ git+https://github.com/personalrobotics/mj_environment.git",
     "mj-viser @ git+https://github.com/personalrobotics/mj_viser.git",
     "prl-assets @ git+https://github.com/personalrobotics/prl_assets.git",
-    "sstsr>=2.0.0",
+    "sstsr>=3.4,<4",
     "viser>=1.0",
 ]
 
