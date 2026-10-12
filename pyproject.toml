@@ -15,7 +15,7 @@ requires-python = ">=3.11"  # ssik (transitive via JACO 2 IK) requires 3.11+
 dependencies = [
     "numpy",
     "mujoco",
-    "ssik>=1.1.0",
+    "ssik>=7,<8",
     "ipython>=8.0",
     "ada-assets @ git+https://github.com/personalrobotics/ada_assets.git",
     "mj-manipulator @ git+https://github.com/personalrobotics/mj_manipulator.git",
