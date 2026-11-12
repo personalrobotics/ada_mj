@@ -24,6 +24,11 @@ seeds never used before, from a clean checkout of the merged commit.
     `a8f4e4497aa9db623c1979cd32d5e4d02523726974e4b64412a1e84f0cf7da17`);
   - `<grip>/seed-<S>/lift.json`: each run's full report.
 
+The runner doesn't stop on a failed run. It writes `EXIT=0` once the 60 runs finish,
+whatever their exits, and it doesn't check that the version probe succeeded. For this
+run, all three were checked: all 60 runs exited 0, each wrote its `lift.json`, and
+`run.log` records the versions.
+
 ## Results
 
 | Grip | Grasp succeeded | Held | Height when held | Largest tilt over the hold (median / max) |
