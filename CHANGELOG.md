@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+- **Evidence** (`evidence/fresh-seeds`): on seeds 1000–1029, the enveloping grasp
+  held 30 of 30 and the fingertip grasp 24 of 30.
+
 ada_mj moves onto ssrobot and ssgrasping.
 
 - **Removed:** the mj_manipulator application, with its console and feeding demo.

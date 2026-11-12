@@ -34,6 +34,9 @@ first found it moved in the hand.
 the fingertips. They are there for comparison: the JACO2's curling fingers pull the
 cylinder in and turn it as they close, and it often slips.
 
+On 30 fresh seeds, the enveloping grasp held the cylinder every time and the fingertip
+grasp 24 times: [`evidence/fresh-seeds`](evidence/fresh-seeds/README.md).
+
 ## Limitations
 
 - **Held-object collision geometry is not conservative after the JACO2 seats the object

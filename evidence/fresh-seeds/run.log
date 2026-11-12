@@ -1,0 +1,67 @@
+2026-11-12T22:27:35+00:00 command /private/tmp/claude-501/-Users-siddh-code-robot-code/08af1f26-82ca-4f5a-8b09-af54dd5f4e9e/scratchpad/evidence_run.py /Users/siddh/code/ada_mj-evidence runs/20261112T222735Z-evidence
+2026-11-12T22:27:35+00:00 commit 9eaa328dcda43dac67abe54fbb49728375c4125c clean=True
+2026-11-12T22:27:35+00:00 host Siddharthas-MacBook-Pro-4.local macOS-26.6.2-arm64-arm-64bit load (168.64892578125, 179.8681640625, 98.03173828125)
+2026-11-12T22:27:35+00:00 versions {"ada-mj": "0.2.0.dev0", "ssrobot": "0.0.0", "ssgrasping": "0.0.1", "sstsr": "4.5.0", "sscbirrt": "3.16.0", "mujoco": "3.14.0", "ada-assets": "0.1.0", "numpy": "2.5.4"}
+2026-11-12T22:27:35+00:00 declared: seeds 1000-1029 (30), grips ('enveloping', 'fingertip'): 60 runs
+2026-11-12T22:27:52+00:00 1/60 enveloping seed 1000: exit 0 grasp succeeded held True rise 0.0611 tilt 0.093 failed None elapsed 16s
+2026-11-12T22:27:54+00:00 2/60 enveloping seed 1001: exit 0 grasp succeeded held True rise 0.0604 tilt 0.096 failed None elapsed 19s
+2026-11-12T22:27:56+00:00 3/60 enveloping seed 1002: exit 0 grasp succeeded held True rise 0.0605 tilt 0.1 failed None elapsed 21s
+2026-11-12T22:27:58+00:00 4/60 enveloping seed 1003: exit 0 grasp succeeded held True rise 0.0606 tilt 0.087 failed None elapsed 23s
+2026-11-12T22:28:01+00:00 5/60 enveloping seed 1004: exit 0 grasp succeeded held True rise 0.0613 tilt 0.102 failed None elapsed 25s
+2026-11-12T22:28:02+00:00 6/60 enveloping seed 1005: exit 0 grasp succeeded held True rise 0.0613 tilt 0.101 failed None elapsed 27s
+2026-11-12T22:28:04+00:00 7/60 enveloping seed 1006: exit 0 grasp succeeded held True rise 0.0607 tilt 0.091 failed None elapsed 29s
+2026-11-12T22:28:06+00:00 8/60 enveloping seed 1007: exit 0 grasp succeeded held True rise 0.0611 tilt 0.095 failed None elapsed 31s
+2026-11-12T22:28:09+00:00 9/60 enveloping seed 1008: exit 0 grasp succeeded held True rise 0.0591 tilt 0.048 failed None elapsed 33s
+2026-11-12T22:28:11+00:00 10/60 enveloping seed 1009: exit 0 grasp succeeded held True rise 0.061 tilt 0.09 failed None elapsed 35s
+2026-11-12T22:28:13+00:00 11/60 enveloping seed 1010: exit 0 grasp succeeded held True rise 0.061 tilt 0.087 failed None elapsed 37s
+2026-11-12T22:28:15+00:00 12/60 enveloping seed 1011: exit 0 grasp succeeded held True rise 0.0607 tilt 0.107 failed None elapsed 39s
+2026-11-12T22:28:16+00:00 13/60 enveloping seed 1012: exit 0 grasp succeeded held True rise 0.0606 tilt 0.089 failed None elapsed 41s
+2026-11-12T22:28:18+00:00 14/60 enveloping seed 1013: exit 0 grasp succeeded held True rise 0.0611 tilt 0.094 failed None elapsed 43s
+2026-11-12T22:28:20+00:00 15/60 enveloping seed 1014: exit 0 grasp succeeded held True rise 0.0611 tilt 0.087 failed None elapsed 45s
+2026-11-12T22:28:22+00:00 16/60 enveloping seed 1015: exit 0 grasp succeeded held True rise 0.0591 tilt 0.029 failed None elapsed 47s
+2026-11-12T22:28:24+00:00 17/60 enveloping seed 1016: exit 0 grasp succeeded held True rise 0.06 tilt 0.067 failed None elapsed 49s
+2026-11-12T22:28:26+00:00 18/60 enveloping seed 1017: exit 0 grasp succeeded held True rise 0.0612 tilt 0.099 failed None elapsed 51s
+2026-11-12T22:28:28+00:00 19/60 enveloping seed 1018: exit 0 grasp succeeded held True rise 0.0612 tilt 0.094 failed None elapsed 53s
+2026-11-12T22:28:30+00:00 20/60 enveloping seed 1019: exit 0 grasp succeeded held True rise 0.0615 tilt 0.117 failed None elapsed 55s
+2026-11-12T22:28:32+00:00 21/60 enveloping seed 1020: exit 0 grasp succeeded held True rise 0.0607 tilt 0.098 failed None elapsed 57s
+2026-11-12T22:28:34+00:00 22/60 enveloping seed 1021: exit 0 grasp succeeded held True rise 0.0605 tilt 0.084 failed None elapsed 58s
+2026-11-12T22:28:36+00:00 23/60 enveloping seed 1022: exit 0 grasp succeeded held True rise 0.0606 tilt 0.062 failed None elapsed 60s
+2026-11-12T22:28:37+00:00 24/60 enveloping seed 1023: exit 0 grasp succeeded held True rise 0.0612 tilt 0.096 failed None elapsed 62s
+2026-11-12T22:28:39+00:00 25/60 enveloping seed 1024: exit 0 grasp succeeded held True rise 0.0604 tilt 0.056 failed None elapsed 64s
+2026-11-12T22:28:41+00:00 26/60 enveloping seed 1025: exit 0 grasp succeeded held True rise 0.0601 tilt 0.095 failed None elapsed 66s
+2026-11-12T22:28:43+00:00 27/60 enveloping seed 1026: exit 0 grasp succeeded held True rise 0.0614 tilt 0.106 failed None elapsed 68s
+2026-11-12T22:28:45+00:00 28/60 enveloping seed 1027: exit 0 grasp succeeded held True rise 0.0612 tilt 0.103 failed None elapsed 70s
+2026-11-12T22:28:47+00:00 29/60 enveloping seed 1028: exit 0 grasp succeeded held True rise 0.0611 tilt 0.096 failed None elapsed 72s
+2026-11-12T22:28:49+00:00 30/60 enveloping seed 1029: exit 0 grasp succeeded held True rise 0.0611 tilt 0.096 failed None elapsed 74s
+2026-11-12T22:28:51+00:00 31/60 fingertip seed 1000: exit 0 grasp succeeded held False rise 0.003 tilt 0.154 failed None elapsed 75s
+2026-11-12T22:28:52+00:00 32/60 fingertip seed 1001: exit 0 grasp succeeded held True rise 0.0623 tilt 0.196 failed None elapsed 77s
+2026-11-12T22:28:55+00:00 33/60 fingertip seed 1002: exit 0 grasp succeeded held True rise 0.0616 tilt 0.235 failed None elapsed 79s
+2026-11-12T22:28:56+00:00 34/60 fingertip seed 1003: exit 0 grasp succeeded held True rise 0.0623 tilt 0.19 failed None elapsed 81s
+2026-11-12T22:28:58+00:00 35/60 fingertip seed 1004: exit 0 grasp succeeded held True rise 0.0616 tilt 0.105 failed None elapsed 83s
+2026-11-12T22:29:00+00:00 36/60 fingertip seed 1005: exit 0 grasp succeeded held False rise -0.0001 tilt 0.162 failed None elapsed 85s
+2026-11-12T22:29:02+00:00 37/60 fingertip seed 1006: exit 0 grasp succeeded held True rise 0.0614 tilt 0.211 failed None elapsed 87s
+2026-11-12T22:29:04+00:00 38/60 fingertip seed 1007: exit 0 grasp succeeded held True rise 0.0614 tilt 0.257 failed None elapsed 89s
+2026-11-12T22:29:06+00:00 39/60 fingertip seed 1008: exit 0 grasp succeeded held True rise 0.0622 tilt 0.194 failed None elapsed 91s
+2026-11-12T22:29:08+00:00 40/60 fingertip seed 1009: exit 0 grasp succeeded held False rise 0.0025 tilt 0.14 failed None elapsed 93s
+2026-11-12T22:29:10+00:00 41/60 fingertip seed 1010: exit 0 grasp succeeded held True rise 0.0618 tilt 0.219 failed None elapsed 95s
+2026-11-12T22:29:12+00:00 42/60 fingertip seed 1011: exit 0 grasp succeeded held False rise -388.0239 tilt 1.571 failed None elapsed 97s
+2026-11-12T22:29:14+00:00 43/60 fingertip seed 1012: exit 0 grasp succeeded held True rise 0.0616 tilt 0.229 failed None elapsed 99s
+2026-11-12T22:29:16+00:00 44/60 fingertip seed 1013: exit 0 grasp succeeded held False rise -0.0001 tilt 0.127 failed None elapsed 100s
+2026-11-12T22:29:18+00:00 45/60 fingertip seed 1014: exit 0 grasp succeeded held True rise 0.0615 tilt 0.204 failed None elapsed 102s
+2026-11-12T22:29:19+00:00 46/60 fingertip seed 1015: exit 0 grasp succeeded held True rise 0.062 tilt 0.193 failed None elapsed 104s
+2026-11-12T22:29:22+00:00 47/60 fingertip seed 1016: exit 0 grasp succeeded held True rise 0.0621 tilt 0.2 failed None elapsed 107s
+2026-11-12T22:29:25+00:00 48/60 fingertip seed 1017: exit 0 grasp succeeded held True rise 0.0615 tilt 0.229 failed None elapsed 109s
+2026-11-12T22:29:27+00:00 49/60 fingertip seed 1018: exit 0 grasp succeeded held True rise 0.0615 tilt 0.201 failed None elapsed 111s
+2026-11-12T22:29:29+00:00 50/60 fingertip seed 1019: exit 0 grasp succeeded held True rise 0.0554 tilt 0.163 failed None elapsed 113s
+2026-11-12T22:29:31+00:00 51/60 fingertip seed 1020: exit 0 grasp succeeded held True rise 0.0627 tilt 0.222 failed None elapsed 116s
+2026-11-12T22:29:34+00:00 52/60 fingertip seed 1021: exit 0 grasp succeeded held True rise 0.0615 tilt 0.227 failed None elapsed 118s
+2026-11-12T22:29:36+00:00 53/60 fingertip seed 1022: exit 0 grasp succeeded held True rise 0.0563 tilt 0.126 failed None elapsed 120s
+2026-11-12T22:29:37+00:00 54/60 fingertip seed 1023: exit 0 grasp succeeded held True rise 0.062 tilt 0.193 failed None elapsed 122s
+2026-11-12T22:29:40+00:00 55/60 fingertip seed 1024: exit 0 grasp succeeded held True rise 0.0626 tilt 0.136 failed None elapsed 125s
+2026-11-12T22:29:42+00:00 56/60 fingertip seed 1025: exit 0 grasp succeeded held True rise 0.0616 tilt 0.195 failed None elapsed 127s
+2026-11-12T22:29:44+00:00 57/60 fingertip seed 1026: exit 0 grasp succeeded held True rise 0.0562 tilt 0.129 failed None elapsed 129s
+2026-11-12T22:29:47+00:00 58/60 fingertip seed 1027: exit 0 grasp succeeded held True rise 0.0605 tilt 0.042 failed None elapsed 131s
+2026-11-12T22:29:50+00:00 59/60 fingertip seed 1028: exit 0 grasp succeeded held True rise 0.0616 tilt 0.104 failed None elapsed 134s
+2026-11-12T22:29:52+00:00 60/60 fingertip seed 1029: exit 0 grasp succeeded held False rise -0.0001 tilt 0.162 failed None elapsed 136s
+2026-11-12T22:29:52+00:00 by_grip {"enveloping": {"runs": 30, "grasp_succeeded": 30, "held": 30, "rise_m_held_min_max": [0.0591, 0.0615], "max_tilt_rad_held_max": 0.117, "failed_stages": []}, "fingertip": {"runs": 30, "grasp_succeeded": 30, "held": 24, "rise_m_held_min_max": [0.0554, 0.0627], "max_tilt_rad_held_max": 0.257, "failed_stages": []}}
+2026-11-12T22:29:52+00:00 EXIT=0
