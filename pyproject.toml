@@ -1,43 +1,47 @@
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
-
+# ada_mj on ssrobot and ssgrasping: ADA's bare hand grasps and lifts a cylinder in open
+# space. It replaced the mj_manipulator application, which remains at v0.1.0. It never
+# imports mj_manipulator, mj_environment, asset_manager, or the old mj-viser
+# (scripts/check_boundary.py).
 [project]
 name = "ada-mj"
-version = "0.1.0"
-description = "MuJoCo simulation and mj_manipulator integration for the ADA robot-assisted feeding system"
+version = "0.2.0.dev0"
+description = "ADA, the assistive feeding robot, on ssrobot and ssgrasping"
 readme = "README.md"
+requires-python = ">=3.11,<3.14"
 license = "MIT"
-authors = [
-    {name = "Siddhartha Srinivasa", email = "siddhartha.srinivasa@gmail.com"},
-]
-requires-python = ">=3.11"  # ssik (transitive via JACO 2 IK) requires 3.11+
+authors = [{name = "Siddhartha Srinivasa", email = "siddhartha.srinivasa@gmail.com"}]
+maintainers = [{name = "Siddhartha Srinivasa", email = "siddhartha.srinivasa@gmail.com"}]
 dependencies = [
-    "numpy",
-    "mujoco",
-    "ssik>=8.2,<9",
-    "ipython>=8.0",
-    "ada-assets @ git+https://github.com/personalrobotics/ada_assets.git",
-    "mj-manipulator @ git+https://github.com/personalrobotics/mj_manipulator.git",
-    "mj-environment @ git+https://github.com/personalrobotics/mj_environment.git",
-    "mj-viser @ git+https://github.com/personalrobotics/mj_viser.git",
-    "prl-assets @ git+https://github.com/personalrobotics/prl_assets.git",
-    "sstsr>=3.4,<4",
-    "viser>=1.0",
+    # Imported directly: KinovaJaco2TwoFinger, the JACO2's grasp templates, with its
+    # enveloping side grasps (personalrobotics/sstsr#204).
+    "sstsr==4.5.0",
+    # Imported directly (CBiRRTConfig): the version ssrobot's planning extra pins.
+    "sscbirrt==3.16.0",
+    # Pinned by commit: the contracts and skills this app is proven against.
+    "ssrobot[mujoco,planning] @ git+https://github.com/personalrobotics/ssrobot@e1761b1ec61896652577c9ae44c07c5f4a11a282",
+    # With the hand declaration that the JACO2's opening does not establish a grasp
+    # (personalrobotics/ssgrasping#47).
+    "ssgrasping[sstsr] @ git+https://github.com/personalrobotics/ssgrasping@cdab288c19ac82d12bf7c1a0aa332cf38a1b683a",
+    # The bare-hand package, ada_assets.models, with where the JACO2's gripper joints
+    # settle open and closed (ada_assets#49): ssrobot's reference pin for ADA, at the
+    # ssrobot pinned above.
+    "ada-assets @ git+https://github.com/personalrobotics/ada_assets@0703586a91fd933b5b4ddf0257e804ab37002e75",
 ]
 
-[tool.uv.sources]
-ada-assets = { workspace = true }
-mj-manipulator = { workspace = true }
-mj-environment = { workspace = true }
-mj-viser = { workspace = true }
-prl-assets = { workspace = true }
+[project.urls]
+Homepage = "https://github.com/personalrobotics/ada_mj"
+Repository = "https://github.com/personalrobotics/ada_mj"
+Issues = "https://github.com/personalrobotics/ada_mj/issues"
 
-[project.optional-dependencies]
-dev = [
-    "pytest",
-    "ruff",
-]
+[project.scripts]
+ada-lift = "ada_mj.lift:main"
+
+[dependency-groups]
+dev = ["mypy>=1.13", "pytest>=8.3", "ruff>=0.8"]
+
+[build-system]
+requires = ["hatchling>=1.25"]
+build-backend = "hatchling.build"
 
 [tool.hatch.metadata]
 allow-direct-references = true
@@ -45,19 +49,25 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = ["src/ada_mj"]
 
-[project.urls]
-Homepage = "https://github.com/personalrobotics/ada_mj"
-Repository = "https://github.com/personalrobotics/ada_mj"
-Issues = "https://github.com/personalrobotics/ada_mj/issues"
+# Its own workspace root: uv never adopts it into the robot-code workspace around the
+# legacy stack (mj_manipulator, the old mj_viser).
+[tool.uv.workspace]
+members = []
 
 [tool.ruff]
-line-length = 120
+line-length = 100
+target-version = "py311"
 
 [tool.ruff.lint]
-select = ["F", "E", "W", "I"]
+select = ["E", "F", "W", "I", "B", "UP", "RUF"]
+
+[tool.mypy]
+strict = true
+files = ["src", "tests", "scripts"]
+
+[[tool.mypy.overrides]]
+module = ["mujoco.*", "sscbirrt.*", "tsr.*", "ada_assets.*"]
+ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-markers = [
-    "slow: integration tests that load the full MuJoCo model and plan (deselect with '-m \"not slow\"')",
-]
