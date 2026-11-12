@@ -11,3 +11,4 @@ build/
 
 # Each test's evidence (ADA_ARTIFACTS), and evaluation runs
 artifacts/
+runs/

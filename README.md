@@ -26,8 +26,8 @@ grasp's `acquired` and `retained` are unobserved, and ADA proceeds on them by a 
 policy (`assume_unobserved`), recorded in every run.
 
 Whether the cylinder is held is scored from the simulator's state, for evaluation only.
-It is held when, at the end of the hold, it is still attached and has risen at least
-5 cm. The run also records the cylinder's largest tilt over the hold, and when ssrobot
+It is held when the grasp succeeded and, at the end of the hold, the cylinder has
+risen at least 5 cm. The run also records the cylinder's largest tilt over the hold, and when ssrobot
 first found it moved in the hand.
 
 `--grip fingertip` uses sstsr's other side grasps instead, which pinch the cylinder at

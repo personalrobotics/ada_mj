@@ -7,8 +7,8 @@ shows:
 - the grasp succeeding, every stage of it;
 - ``acquired`` and ``retained`` assumed, unobserved, by the application's recorded
   policy, and nothing else assumed (personalrobotics/ssgrasping#47);
-- the cylinder held at the end of the hold, from privileged state: attached, and risen
-  at least ``LIFT_M - LIFT_TOLERANCE_M``;
+- the cylinder held at the end of the hold, from privileged state: risen at least
+  ``LIFT_M - LIFT_TOLERANCE_M``;
 - the same report, byte for byte, from a second run.
 
 Reproduce with ``uv run pytest tests/test_lift.py``, or ``uv run ada-lift --seed 0

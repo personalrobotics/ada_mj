@@ -17,8 +17,10 @@ this application proceeds on them by an explicit policy, ``POLICY`` (``assume_un
 recorded in every run. After the lift the hand holds still for ``HOLD_NS``.
 
 Whether the cylinder is held is read from privileged state, for evaluation only: nothing
-here branches on it. It is held when, at the end of the hold, it is still attached and
-has risen at least ``LIFT_M - LIFT_TOLERANCE_M``. Its largest tilt over the hold, and
+here branches on it. It is held when the grasp succeeded and, at the end of the hold, it
+has risen at least ``LIFT_M - LIFT_TOLERANCE_M``. (With registered object poses the
+scene keeps the attachment however the cylinder moves, so the attachment says nothing
+here.) Its largest tilt over the hold, and
 when the runtime first found it moved in the hand past the attachment's tolerance, are
 recorded beside that: they measure the first limitation below, and are not failures.
 
@@ -115,7 +117,8 @@ class _SideGrip:
         return [
             t
             for t in self.hand.grasp_cylinder_side(*args, **kwargs)
-            if (t.provenance.grip == "enveloping") == (self.grip == "enveloping")
+            if (t.provenance is not None and t.provenance.grip == "enveloping")
+            == (self.grip == "enveloping")
         ]
 
 
@@ -188,7 +191,8 @@ def lift(seed: int, grip: str = GRIPS[0]) -> dict[str, Any]:
                 return Pose(position=(x, y, z), quat_wxyz=(w, i, j, k))
 
             observation = ctx.observe(pose_request)
-            registration = observed()
+            x, y, z, w, i, j, k = observation.readings[0].value  # type: ignore[misc]
+            registration = Pose(position=(x, y, z), quat_wxyz=(w, i, j, k))
             ctx.register(OBJECT, registration, stamp=observation.stamp, source="pose_channel")
             regions = grasp_regions(
                 GraspObject(
@@ -216,7 +220,7 @@ def lift(seed: int, grip: str = GRIPS[0]) -> dict[str, Any]:
             )
             before = registration.position[2]
             result = run_skill(ctx, grasp(ctx, planner, spec), max_ticks=MAX_TICKS)
-            held_until = None
+            hold_ended = None
             max_tilt = 0.0
             if result.succeeded:
                 end = ctx.now.time_ns + HOLD_NS
@@ -226,32 +230,39 @@ def lift(seed: int, grip: str = GRIPS[0]) -> dict[str, Any]:
                         max_tilt = max(max_tilt, _tilt(observed()))
                         sample += TILT_SAMPLE_NS
                     ctx.step()
-                held_until = ctx.now.time_ns
+                hold_ended = ctx.now.time_ns
             # Privileged, for evaluation only.
-            rise = observed().position[2] - before
+            final = observed()
+            if hold_ended is not None:
+                max_tilt = max(max_tilt, _tilt(final))
+            rise = final.position[2] - before
             left = ctx.violation(OBJECT)
             privileged = {
                 "rise_m": round(rise, 4),
-                "held": (
-                    held_until is not None
-                    and ctx.scene.attachment(OBJECT) is not None
-                    and rise >= LIFT_M - LIFT_TOLERANCE_M
-                ),
-                "held_until_ns": held_until,
+                "held": hold_ended is not None and rise >= LIFT_M - LIFT_TOLERANCE_M,
+                "hold_ended_ns": hold_ended,
                 "max_tilt_rad": round(max_tilt, 3),
-                "attachment_violation": None if left is None else dataclasses.asdict(left),
+                "attachment_violation": None if left is None else _violation(left),
             }
     return {
         "seed": seed,
         "grip": grip,
         "cylinder": {
-            "position": list(registration.position),
-            "quat_wxyz": list(registration.quat_wxyz),
+            "position": [round(v, 6) for v in registration.position],
+            "quat_wxyz": [round(v, 6) for v in registration.quat_wxyz],
         },
         "grasp": _skill(result),
         "policy": POLICY,
         "privileged": privileged,
     }
+
+
+def _violation(left: Any) -> dict[str, Any]:
+    """The runtime's attachment violation, its errors rounded to 0.1 mm and 1 mrad."""
+    record = dataclasses.asdict(left)
+    record["position_error"] = round(record["position_error"], 4)
+    record["rotation_error"] = round(record["rotation_error"], 3)
+    return record
 
 
 def _tilt(pose: Pose) -> float:
