@@ -1,0 +1,633 @@
+{
+ "commit": "9eaa328dcda43dac67abe54fbb49728375c4125c",
+ "seeds": [
+  1000,
+  1029
+ ],
+ "runs": [
+  {
+   "grip": "enveloping",
+   "seed": 1000,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0611,
+   "max_tilt_rad": 0.093
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1001,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0604,
+   "max_tilt_rad": 0.096
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1002,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0605,
+   "max_tilt_rad": 0.1
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1003,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0606,
+   "max_tilt_rad": 0.087
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1004,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0613,
+   "max_tilt_rad": 0.102
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1005,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0613,
+   "max_tilt_rad": 0.101
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1006,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0607,
+   "max_tilt_rad": 0.091
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1007,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0611,
+   "max_tilt_rad": 0.095
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1008,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0591,
+   "max_tilt_rad": 0.048
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1009,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.061,
+   "max_tilt_rad": 0.09
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1010,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.061,
+   "max_tilt_rad": 0.087
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1011,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0607,
+   "max_tilt_rad": 0.107
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1012,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0606,
+   "max_tilt_rad": 0.089
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1013,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0611,
+   "max_tilt_rad": 0.094
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1014,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0611,
+   "max_tilt_rad": 0.087
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1015,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0591,
+   "max_tilt_rad": 0.029
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1016,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.06,
+   "max_tilt_rad": 0.067
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1017,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0612,
+   "max_tilt_rad": 0.099
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1018,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0612,
+   "max_tilt_rad": 0.094
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1019,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0615,
+   "max_tilt_rad": 0.117
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1020,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0607,
+   "max_tilt_rad": 0.098
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1021,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0605,
+   "max_tilt_rad": 0.084
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1022,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0606,
+   "max_tilt_rad": 0.062
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1023,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0612,
+   "max_tilt_rad": 0.096
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1024,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0604,
+   "max_tilt_rad": 0.056
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1025,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0601,
+   "max_tilt_rad": 0.095
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1026,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0614,
+   "max_tilt_rad": 0.106
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1027,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0612,
+   "max_tilt_rad": 0.103
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1028,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0611,
+   "max_tilt_rad": 0.096
+  },
+  {
+   "grip": "enveloping",
+   "seed": 1029,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0611,
+   "max_tilt_rad": 0.096
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1000,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": false,
+   "rise_m": 0.003,
+   "max_tilt_rad": 0.154
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1001,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0623,
+   "max_tilt_rad": 0.196
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1002,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0616,
+   "max_tilt_rad": 0.235
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1003,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0623,
+   "max_tilt_rad": 0.19
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1004,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0616,
+   "max_tilt_rad": 0.105
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1005,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": false,
+   "rise_m": -0.0001,
+   "max_tilt_rad": 0.162
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1006,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0614,
+   "max_tilt_rad": 0.211
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1007,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0614,
+   "max_tilt_rad": 0.257
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1008,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0622,
+   "max_tilt_rad": 0.194
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1009,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": false,
+   "rise_m": 0.0025,
+   "max_tilt_rad": 0.14
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1010,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0618,
+   "max_tilt_rad": 0.219
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1011,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": false,
+   "rise_m": -388.0239,
+   "max_tilt_rad": 1.571
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1012,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0616,
+   "max_tilt_rad": 0.229
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1013,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": false,
+   "rise_m": -0.0001,
+   "max_tilt_rad": 0.127
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1014,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0615,
+   "max_tilt_rad": 0.204
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1015,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.062,
+   "max_tilt_rad": 0.193
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1016,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0621,
+   "max_tilt_rad": 0.2
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1017,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0615,
+   "max_tilt_rad": 0.229
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1018,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0615,
+   "max_tilt_rad": 0.201
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1019,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0554,
+   "max_tilt_rad": 0.163
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1020,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0627,
+   "max_tilt_rad": 0.222
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1021,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0615,
+   "max_tilt_rad": 0.227
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1022,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0563,
+   "max_tilt_rad": 0.126
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1023,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.062,
+   "max_tilt_rad": 0.193
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1024,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0626,
+   "max_tilt_rad": 0.136
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1025,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0616,
+   "max_tilt_rad": 0.195
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1026,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0562,
+   "max_tilt_rad": 0.129
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1027,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0605,
+   "max_tilt_rad": 0.042
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1028,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": true,
+   "rise_m": 0.0616,
+   "max_tilt_rad": 0.104
+  },
+  {
+   "grip": "fingertip",
+   "seed": 1029,
+   "exit": 0,
+   "grasp": "succeeded",
+   "failed_stage": null,
+   "held": false,
+   "rise_m": -0.0001,
+   "max_tilt_rad": 0.162
+  }
+ ],
+ "by_grip": {
+  "enveloping": {
+   "runs": 30,
+   "grasp_succeeded": 30,
+   "held": 30,
+   "rise_m_held_min_max": [
+    0.0591,
+    0.0615
+   ],
+   "max_tilt_rad_held_max": 0.117,
+   "failed_stages": []
+  },
+  "fingertip": {
+   "runs": 30,
+   "grasp_succeeded": 30,
+   "held": 24,
+   "rise_m_held_min_max": [
+    0.0554,
+    0.0627
+   ],
+   "max_tilt_rad_held_max": 0.257,
+   "failed_stages": []
+  }
+ }
+}

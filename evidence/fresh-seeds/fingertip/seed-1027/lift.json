@@ -1,0 +1,144 @@
+{
+  "seed": 1027,
+  "grip": "fingertip",
+  "cylinder": {
+    "position": [
+      0.279417,
+      -0.617212,
+      0.795
+    ],
+    "quat_wxyz": [
+      -0.128227,
+      0.0,
+      0.0,
+      0.991745
+    ]
+  },
+  "grasp": {
+    "state": "succeeded",
+    "stages": [
+      {
+        "name": "preflight",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "references, commands, channels, and guards available"
+      },
+      {
+        "name": "open",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "opening 1.000"
+      },
+      {
+        "name": "pregrasp",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "succeeded"
+      },
+      {
+        "name": "approach",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "succeeded"
+      },
+      {
+        "name": "close",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "opening 0.010"
+      },
+      {
+        "name": "obstructed",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "not judged: this hand's opening does not establish a grasp; the fingers reached their target, at opening 0.010"
+      },
+      {
+        "name": "attach",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "allowed articutool_attachment_site, camera/camera_base, camera/camera_link, camera/camera_mount, camera/color_optical_frame, camera/d415, camera/d415_color, camera/d415_depth, camera/enclosure_bottom, camera/enclosure_top, camera/front_stabilizer, camera/jetson_nano, camera_attachment_site, ee_site, forque_attachment_site, j2n6s200_link_6, j2n6s200_link_finger_1, j2n6s200_link_finger_2, j2n6s200_link_finger_tip_1, j2n6s200_link_finger_tip_2, palm_grasp_site, tool_attachment_site, ada_table"
+      },
+      {
+        "name": "lift",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "succeeded"
+      },
+      {
+        "name": "acquired",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "assumed, unobserved: this hand's opening does not establish a grasp; after the lift, opening 0.006"
+      },
+      {
+        "name": "restrict",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "allowed articutool_attachment_site, camera/camera_base, camera/camera_link, camera/camera_mount, camera/color_optical_frame, camera/d415, camera/d415_color, camera/d415_depth, camera/enclosure_bottom, camera/enclosure_top, camera/front_stabilizer, camera/jetson_nano, camera_attachment_site, ee_site, forque_attachment_site, j2n6s200_link_6, j2n6s200_link_finger_1, j2n6s200_link_finger_2, j2n6s200_link_finger_tip_1, j2n6s200_link_finger_tip_2, palm_grasp_site, tool_attachment_site"
+      },
+      {
+        "name": "clear",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "clear of everything"
+      },
+      {
+        "name": "retained",
+        "succeeded": true,
+        "reason": null,
+        "cause": null,
+        "detail": "unobserved through the lift: no_portable_signal"
+      }
+    ],
+    "assumed": [
+      "retained",
+      "acquired"
+    ],
+    "transitions": [
+      {
+        "transition": "retained",
+        "stage": "lift",
+        "outcome": "unobserved",
+        "reason": "no_portable_signal"
+      },
+      {
+        "transition": "acquired",
+        "stage": "acquired",
+        "outcome": "unobserved",
+        "reason": "no_portable_signal"
+      }
+    ],
+    "evaluations": [
+      {
+        "transition": "retained",
+        "estimate": "unobserved",
+        "reference": "confirmed",
+        "source": "attachment_monitor"
+      }
+    ]
+  },
+  "policy": {
+    "acquired": "assumed",
+    "retained": "assumed",
+    "basis": "the JACO2's opening does not establish a grasp, and no portable signal yet tells (personalrobotics/ssgrasping#47)"
+  },
+  "privileged": {
+    "rise_m": 0.0605,
+    "held": true,
+    "hold_ended_ns": 20422000000,
+    "max_tilt_rad": 0.042,
+    "attachment_violation": null
+  }
+}
